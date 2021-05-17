@@ -24,11 +24,6 @@ def fetch(bearer_token, query, starting, stopping, next_token=None):
             # query must not be greater than 1024 characters FYI
             "query": query,
 
-            # time box to these times, exclusive (ISO8601, "YYYY-MM-DDTHH:mm:ssZ")
-            # example timestamp: "2020-01-01T00:00:00Z"
-            "start_time": starting,
-            "end_time": stopping,
-
             # limit to ten results (minimum 10, maximum 500)
             # this limit is exclusive (i.e. 10 gets you 9)
             "max_results": 500,
@@ -42,6 +37,13 @@ def fetch(bearer_token, query, starting, stopping, next_token=None):
             "tweet.fields": "attachments,author_id,context_annotations,conversation_id,created_at,entities,geo,id,in_reply_to_user_id,lang,public_metrics,possibly_sensitive,referenced_tweets,source,text,withheld",
             "place.fields": "contained_within,country,country_code,full_name,geo,id,name,place_type",
         }
+
+        # time box to these times, exclusive (ISO8601, "YYYY-MM-DDTHH:mm:ssZ")
+        # example timestamp: "2020-01-01T00:00:00Z"
+        if starting is not None:
+            params["start_time"] = starting
+        if stopping is not None:
+            params["end_time"] = stopping
 
         if next_token is not None:
             params["next_token"] = next_token
@@ -170,8 +172,8 @@ if __name__ == "__main__":
         description=__doc__,
     )
     parser.add_argument("query", metavar="QUERY", help="twitter APIv2 query to search")
-    parser.add_argument("--starting", required=True, help="the time to start the search (YYYY-MM-DDTHH:mm:ssZ)")
-    parser.add_argument("--stopping", required=True, help="the time to stop the search (YYYY-MM-DDTHH:mm:ssZ)")
+    parser.add_argument("--starting", help="the time to start the search (YYYY-MM-DDTHH:mm:ssZ)")
+    parser.add_argument("--stopping", help="the time to stop the search (YYYY-MM-DDTHH:mm:ssZ)")
     args = parser.parse_args()
 
     # configure a basic logger

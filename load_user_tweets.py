@@ -15,7 +15,7 @@ def main(**kwargs):
 
 def load(host: str, database: str, table: str, tweet_file: str):
     print("loading {} into {} on {} on {}".format(tweet_file, table, database, host))
-    conn = psycopg2.connect(host=host, dbname=database, user="labuser")
+    conn = psycopg2.connect(host=host, dbname=database, user="postgres")
 
     try:
         with open(tweet_file, "rt") as f:

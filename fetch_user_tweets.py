@@ -153,7 +153,7 @@ def main(**kwargs):
 
         # find account ids that we've already loaded and do not load them again
         if account_id not in loaded:
-            account_ids.append(int(account_id))
+            account_ids.append(account_id)
         else:
             logger.info("already loaded {}".format(account_id))
 
