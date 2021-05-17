@@ -1,5 +1,6 @@
 import argparse
 import json
+import getpass
 import os
 import psycopg2
 import sys
@@ -10,12 +11,12 @@ from glob import glob
 def main(**kwargs):
     tweet_files = [x for x in glob(os.path.join(kwargs["input"], "*")) if (x.endswith(".json"))]
     for tweet_file in tweet_files:
-        load(kwargs["host"], kwargs["database"], kwargs["table"], tweet_file)
+        load(kwargs["host"], kwargs["database"], kwargs["username"], kwargs["table"], tweet_file)
 
 
-def load(host: str, database: str, table: str, tweet_file: str):
+def load(host: str, database: str, username: str, table: str, tweet_file: str):
     print("loading {} into {} on {} on {}".format(tweet_file, table, database, host))
-    conn = psycopg2.connect(host=host, dbname=database, user="postgres")
+    conn = psycopg2.connect(host=host, dbname=database, user=username)
 
     try:
         with open(tweet_file, "rt") as f:
@@ -65,14 +66,17 @@ def load(host: str, database: str, table: str, tweet_file: str):
 
 
 if __name__ == "__main__":
+    username = getpass.getuser()
+
     parser = argparse.ArgumentParser(
         prog="load_user_tweets",
         formatter_class=argparse.RawTextHelpFormatter,
         description=__doc__,
     )
     parser.add_argument("input", nargs="?", help="a directory full of files with tweets to load")
-    parser.add_argument("--host", help="the database cluster to load the data into", required=True)
-    parser.add_argument("-d", "--database", help="the database to load the data into", required=True)
+    parser.add_argument("--host", help="the database cluster to load the data into", default="venus.lab.cip.uw.edu")
+    parser.add_argument("-d", "--database", help="the database to load the data into", default=username)
+    parser.add_argument("-u", "--username", help="the name of the user to use when connecting to the database", default=username)
     parser.add_argument("-t", "--table", help="the name of the database table to load this into", required=True)
     args = parser.parse_args()
 

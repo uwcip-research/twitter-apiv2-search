@@ -1,9 +1,3 @@
-"""
-You can run this program like this:
-
-python3 search.py --starting="2016-09-01T00:00:00Z" --stopping="2021-02-11T00:00:00Z" --query="from:ChildrensHD" > searches/search_childrenshd.json
-"""
-
 import argparse
 import json
 import logging
