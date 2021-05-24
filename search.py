@@ -167,13 +167,13 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        prog="fetch_user_tweets",
+        prog="search",
         formatter_class=argparse.RawTextHelpFormatter,
         description=__doc__,
     )
     parser.add_argument("query", metavar="QUERY", help="twitter APIv2 query to search")
-    parser.add_argument("--starting", help="the time to start the search (YYYY-MM-DDTHH:mm:ssZ)")
-    parser.add_argument("--stopping", help="the time to stop the search (YYYY-MM-DDTHH:mm:ssZ)")
+    parser.add_argument("--starting", help="the time to start the search (YYYY-MM-DDTHH:mm:ssZ) (optional)")
+    parser.add_argument("--stopping", help="the time to stop the search (YYYY-MM-DDTHH:mm:ssZ) (optional)")
     args = parser.parse_args()
 
     # configure a basic logger
