@@ -47,10 +47,6 @@ def fetch(bearer_token, query, starting, stopping, next_token=None):
 
         if next_token is not None:
             params["next_token"] = next_token
-        else:
-            # put into our output file what it is that we searched
-            #print(json.dumps(params))
-            pass
 
         headers = {"Authorization": "Bearer {}".format(bearer_token)}
         r = requests.get("https://api.twitter.com/2/tweets/search/all", params=params, headers=headers)
