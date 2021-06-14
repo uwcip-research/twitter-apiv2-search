@@ -19,8 +19,11 @@ changing the name of the file to match the name of the file that you just
 created:
 
 ```
-chmod 600 mycredentials.json
+chmod 600 academic_credentials.json
 ```
+
+The credentials must be named `academic_credentials.json` (or you can edit the
+Python scripts to change the name of the credentials file.)
 
 ## Output
 
