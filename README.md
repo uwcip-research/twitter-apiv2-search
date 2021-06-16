@@ -50,7 +50,7 @@ called `TwitterDev.json` in the same directory where the command is run.
 python3 search.py \
   --starting="2021-01-01T00:00:00Z" \
   --stopping="2021-02-11T00:00:00Z" \
-  --query="from:TwitterDev" > TwitterDev.json
+  "from:TwitterDev" > TwitterDev.json
 ```
 
 ## fetch_user_tweets.py
