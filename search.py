@@ -26,7 +26,7 @@ def fetch(bearer_token, query, starting, stopping, next_token=None):
 
             # limit to ten results (minimum 10, maximum 500)
             # this limit is exclusive (i.e. 10 gets you 9)
-            "max_results": 500,
+            "max_results": 100,
 
             # "expand" every field possible. this takes id numbers that appear in a
             # tweet and turns them in actual readable text.
