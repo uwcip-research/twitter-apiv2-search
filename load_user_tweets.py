@@ -3,15 +3,27 @@ import json
 import getpass
 import os
 import psycopg2
+import re
 import sys
 import traceback
 from glob import glob
 
 
+# compile this for performance later in the module
+NULL_TERMINATOR = re.compile(r"(?<!\\)\\u0000")
+
+
+def replace_null_terminators(text: str, replacement: str = r""):
+    return NULL_TERMINATOR.sub(replacement, text) if text is not None else None
+
+
 def main(**kwargs):
-    tweet_files = [x for x in glob(os.path.join(kwargs["input"], "*")) if (x.endswith(".json"))]
-    for tweet_file in tweet_files:
-        load(kwargs["host"], kwargs["database"], kwargs["username"], kwargs["table"], tweet_file)
+    if os.path.isfile(kwargs["input"]):
+        load(kwargs["host"], kwargs["database"], kwargs["username"], kwargs["table"], kwargs["input"])
+    else:
+        tweet_files = [x for x in glob(os.path.join(kwargs["input"], "*")) if (x.endswith(".json"))]
+        for tweet_file in tweet_files:
+            load(kwargs["host"], kwargs["database"], kwargs["username"], kwargs["table"], tweet_file)
 
 
 def load(host: str, database: str, username: str, table: str, tweet_file: str):
@@ -22,6 +34,7 @@ def load(host: str, database: str, username: str, table: str, tweet_file: str):
         with open(tweet_file, "rt") as f:
             for index, line in enumerate(f):
                 try:
+                    line = replace_null_terminators(line)
                     data = json.loads(line)
                     if "id" not in data:
                         continue
