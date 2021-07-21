@@ -5,8 +5,8 @@ tweak them to meet your needs.
 
 ## Getting Started
 
-Before you can use any of them you need to create a file with your Twitter
-APIv2 credentials. It should look like this:
+Before you can use any of these scripts you need to create a file with your
+Twitter APIv2 credentials. It should look like this:
 
 ```jsonfile
 {
@@ -14,9 +14,7 @@ APIv2 credentials. It should look like this:
 }
 ```
 
-Put your bearer token in there and then lock the file by running this command,
-changing the name of the file to match the name of the file that you just
-created:
+Put your bearer token in there and then lock the file by running this command:
 
 ```
 chmod 600 academic_credentials.json
@@ -37,6 +35,20 @@ lot of tweets from accounts that you do not recognize.
 
 This will not return tweets that have been deleted or where the account has
 been deleted or suspended.
+
+## counts.py
+
+This will return the number of times per minute, hour, or day that a search
+pattern appears. You can see the [Twitter APIv2 documentation](https://developer.twitter.com/en/docs/twitter-api/tweets/search/introduction) or look at [this presentation](https://docs.google.com/presentation/d/13BMR4N5xlYLR6HRyjOJ6UJgG3KH6jV828uARnZK8EJQ/edit?usp=sharing) that covers the gist of it.
+
+This example shows how many tweets per day the user `TwitterDev` has made.
+
+```
+python3 counts.py \
+  --starting="2021-01-01T00:00:00Z" \
+  --stopping="2021-02-11T00:00:00Z" \
+  "from:TwitterDev"
+```
 
 ## search.py
 
