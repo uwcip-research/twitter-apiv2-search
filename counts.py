@@ -1,7 +1,7 @@
 """
 You can run this program like this:
 
-python3 counts.py --starting="2020-01-01T00:00:00Z" --stopping="2021-02-01T00:00:00Z" --query="from:TwitterDev"
+python3 counts.py --starting="2020-01-01T00:00:00Z" --stopping="2021-02-01T00:00:00Z" "from:TwitterDev"
 """
 
 import argparse
@@ -74,7 +74,6 @@ def fetch(bearer_token, query, starting, stopping, granularity, next_token=None)
 
 
 def parse(raw):
-    print("starting, stopping, tweet_count")
     for count in raw.get("data", []):
         print(", ".join([count["start"], count["end"], str(count["tweet_count"])]))
 
@@ -90,6 +89,7 @@ def main(**kwargs):
         if bearer_token is None:
             raise RuntimeError("could not load bearer token from credentials.json")
 
+    print("starting, stopping, tweet_count")
     pages = 0
     total = 0
     next_token = None
