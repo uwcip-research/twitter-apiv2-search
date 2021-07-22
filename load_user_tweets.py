@@ -21,7 +21,7 @@ def main(**kwargs):
     if os.path.isfile(kwargs["input"]):
         load(kwargs["host"], kwargs["database"], kwargs["username"], kwargs["table"], kwargs["input"])
     else:
-        tweet_files = [x for x in glob(os.path.join(kwargs["input"], "*")) if (x.endswith(".json"))]
+        tweet_files = [x for x in glob(kwargs["input"]) if (x.endswith(".json") or x.endswith(".json.gz"))]
         for tweet_file in tweet_files:
             load(kwargs["host"], kwargs["database"], kwargs["username"], kwargs["table"], tweet_file)
 
