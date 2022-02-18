@@ -127,7 +127,7 @@ def parse(raw, file_path):
 def main(**kwargs):
     # load credentials
     bearer_token = None
-    with open("academic_credentials.json", "rt") as f:
+    with open(kwargs["credentials"], "rt") as f:
         credentials = json.load(f)
         bearer_token = credentials.get("bearer_token")
         if bearer_token is None:
@@ -178,6 +178,7 @@ if __name__ == "__main__":
         formatter_class=argparse.RawTextHelpFormatter,
         description=__doc__,
     )
+    parser.add_argument("-c", "--credentials", default="academic_credentials.json", help="path to a credentials file")
     parser.add_argument("--output", required=True, help="path to directory where outputs will be written")
     parser.add_argument("--starting", required=True, help="the time to start the search (YYYY-MM-DDTHH:mm:ssZ)")
     parser.add_argument("--stopping", required=True, help="the time to stop the search (YYYY-MM-DDTHH:mm:ssZ)")
