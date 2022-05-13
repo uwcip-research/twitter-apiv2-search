@@ -118,7 +118,7 @@ def parse(tweet_ids, raw, file_path):
                     "tweet": tweet["text"],
                     "hashtags": [x["tag"] for x in tweet.get("entities", {}).get("hashtags", [])],
                     "urls": [x["expanded_url"] for x in tweet.get("entities", {}).get("urls", [])],
-                    "source": tweet["source"],
+                    "source": tweet.get("source", None),
                     "language": tweet["lang"],
                     "retweet_count": tweet["public_metrics"]["retweet_count"],
                     "reply_count": tweet["public_metrics"]["reply_count"],
