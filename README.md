@@ -52,7 +52,7 @@ python3 counts.py \
 
 ## search.py
 
-This will search for tweets using a search pattern. You can see the [Twitter APIv2 documentation](https://developer.twitter.com/en/docs/twitter-api/tweets/search/introduction) or look at [this presentation](https://docs.google.com/presentation/d/13BMR4N5xlYLR6HRyjOJ6UJgG3KH6jV828uARnZK8EJQ/edit?usp=sharing) that covers the gist of it.
+This will search for tweets using a search pattern. You can see the [Twitter APIv2 documentation](https://developer.twitter.com/en/docs/twitter-api/tweets/search/introduction) or look at [this presentation](https://uwnetid.sharepoint.com/:p:/r/sites/ischoolusers/CIP/Infrastructure/Training/Twitter%20APIv2.pptx?d=w0ba1ce4d948a475791806a67295d34fc&csf=1&web=1&e=DcE8aI) that covers the gist of it.
 
 This example searches for tweets from the user `TwitterDev` between the given
 dates. It will output the tweets and all tweets that they reference to a file
