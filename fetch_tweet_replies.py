@@ -21,8 +21,6 @@ def get_tweet_ids(file_name):
             tweet_ids.append(line.strip())
     return tweet_ids
 
-# {"source": "Twitter for Android", "in_reply_to_user_id": "818893114979061761", "author_id": "1555759725605752832", "possibly_sensitive": false, "conversation_id": "1575575350305730560", "public_metrics": {"retweet_count": 0, "reply_count": 0, "like_count": 1, "quote_count": 0}, "id": "1575636478520045569", "lang": "en", "created_at": "2022-09-29T23:59:45.000Z", "edit_history_tweet_ids": ["1575636478520045569"], "entities": {"mentions": [{"start": 0, "end": 13, "username": "JoJoFromJerz", "id": "818893114979061761"}]}, "text": "@JoJoFromJerz Your a clown!", "referenced_tweets": [{"type": "replied_to", "id": "1575575350305730560"}]}
-
 def parse_tweet(tweet, author):
     obj = {
         "id": tweet["id"],
@@ -39,6 +37,7 @@ def parse_tweet(tweet, author):
         "quote_count": tweet["public_metrics"]["quote_count"],
         "in_reply_to_user_id": tweet.get("in_reply_to_user_id", None),
         "possibly_sensitive": tweet["possibly_sensitive"],
+        "reply_settings": tweet["reply_settings"],
 
         "user_id": tweet["author_id"],
         "user_screen_name": author["username"],
@@ -96,7 +95,7 @@ def get_tweets(api, query, tweet_fields_, user_fields_, expand_fields_, start_ti
 
 def fetch_replies(api, tweet_id, write_file):
     user_fields = "created_at,description,entities,id,location,name,protected,public_metrics,url,username,verified,withheld"
-    tweet_fields =  "attachments,author_id,context_annotations,conversation_id,created_at,entities,geo,id,in_reply_to_user_id,lang,public_metrics,possibly_sensitive,referenced_tweets,source,text,withheld"
+    tweet_fields =  "attachments,author_id,context_annotations,conversation_id,created_at,entities,geo,id,in_reply_to_user_id,lang,public_metrics,possibly_sensitive,referenced_tweets,source,text,withheld,reply_settings"
     place_fields = "contained_within,country,country_code,full_name,geo,id,name,place_type"
     expansion_fields = "author_id,in_reply_to_user_id"
 
@@ -127,13 +126,13 @@ def api_test():
     fetch_replies(api, tweet_id, './dat/output.txt')
     return
 
-def batch_fetch_replies(credentials, input, output):
+def batch_fetch_replies(credentials, input, output, timestamp):
     credentials = get_credentials(credentials)
     api = get_API(credentials)
 
     tweet_ids = get_tweet_ids(input)
     for tweet_id in tweet_ids:
-        write_file = os.path.join(output, "replies_%s.txt"%tweet_id)
+        write_file = os.path.join(output, "replies_%s_%s.txt"%(tweet_id, timestamp))
         print('fetching replies for tweet_id=%s and write to=%s'%(tweet_id, write_file))
         fetch_replies(api, tweet_id, write_file)
     return
@@ -157,7 +156,7 @@ def main():
     print('args: credentials=%s, input=%s, output=%s timestamp=%s'%(credentials, input, output, timestamp))
 
     #TODO fetch all replies
-    batch_fetch_replies(credentials, input, output)
+    batch_fetch_replies(credentials, input, output, timestamp)
     return
 
 if __name__ == '__main__':
