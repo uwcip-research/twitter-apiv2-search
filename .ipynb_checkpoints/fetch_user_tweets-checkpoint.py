@@ -11,6 +11,7 @@ from glob import glob
 logger = logging.getLogger(__name__)
 
 
+
 def fetch(bearer_token, account_id, starting, stopping, next_token=None):
     query = "from:{}".format(account_id)
 
