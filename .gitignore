@@ -1,5 +1,7 @@
 .*.swp
 *~
+credentials.json
 *_credentials.json
 *_credentials-*.json
 searches/
+.ipynb_checkpoints

@@ -97,7 +97,7 @@ def parse(raw, file_path):
                 "tweet": tweet["text"],
                 "hashtags": [x["tag"] for x in tweet.get("entities", {}).get("hashtags", [])],
                 "urls": [x["expanded_url"] for x in tweet.get("entities", {}).get("urls", [])],
-                "source": tweet["source"],
+                "source": tweet.get("source", None),
                 "language": tweet["lang"],
                 "retweet_count": tweet["public_metrics"]["retweet_count"],
                 "reply_count": tweet["public_metrics"]["reply_count"],
@@ -177,6 +177,7 @@ if __name__ == "__main__":
         formatter_class=argparse.RawTextHelpFormatter,
         description=__doc__,
     )
+    parser.add_argument("-c", "--credentials", default="academic_credentials.json", help="path to a credentials file")
     parser.add_argument("--output", required=True, help="path to directory where outputs will be written")
     parser.add_argument("--starting", required=True, help="the time to start the search (YYYY-MM-DDTHH:mm:ssZ)")
     parser.add_argument("--stopping", required=True, help="the time to stop the search (YYYY-MM-DDTHH:mm:ssZ)")
