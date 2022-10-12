@@ -56,10 +56,14 @@ def parse_tweet(tweet, author):
     return obj
 
 import traceback
-def get_tweets(api, query, tweet_fields_, user_fields_, expand_fields_, start_time_, end_time_, num_pages=10):
+def get_tweets(api, query, tweet_fields_, user_fields_, expand_fields_, start_time_, end_time_, num_pages, fetch_context_annotation):    
+    if fetch_context_annotation:
+        max_results=100
+    else:
+        max_results=500
+        
     try:
         results = []
-
         responses = tweepy.Paginator(api.search_all_tweets,
                     query=query,
                     tweet_fields=tweet_fields_,
@@ -67,10 +71,10 @@ def get_tweets(api, query, tweet_fields_, user_fields_, expand_fields_, start_ti
                     expansions=expand_fields_,
                     start_time=start_time_,
                     end_time=end_time_,
-                    max_results=10, #max results per page
+                    max_results=max_results, #max results per page, highest allowed is 500 
                     limit=num_pages #max number of pages to return
                   )
-
+        
         for resp in responses: #loop through each tweepy.Response field
             #get all the users from includes
             users = {}  # keyed by user id
@@ -85,7 +89,6 @@ def get_tweets(api, query, tweet_fields_, user_fields_, expand_fields_, start_ti
                 obj = parse_tweet(tweet, author)
                 # print('obj', obj)
                 results.append(obj)
-
         return results
     except (TypeError, ValueError) as e:
         print('error', e)
@@ -93,25 +96,19 @@ def get_tweets(api, query, tweet_fields_, user_fields_, expand_fields_, start_ti
         time.sleep(10)
         return
 
-def fetch_replies(api, tweet_id, write_file):
+def fetch_replies(api, tweet_id, write_file, start_time, end_time, num_pages,fetch_context_annotation):
     user_fields = "created_at,description,entities,id,location,name,protected,public_metrics,url,username,verified,withheld"
-    tweet_fields =  "attachments,author_id,context_annotations,conversation_id,created_at,entities,geo,id,in_reply_to_user_id,lang,public_metrics,possibly_sensitive,referenced_tweets,source,text,withheld,reply_settings"
+    tweet_fields =  "attachments,author_id,conversation_id,created_at,entities,geo,id,in_reply_to_user_id,lang,public_metrics,possibly_sensitive,referenced_tweets,source,text,withheld,reply_settings"
+    if fetch_context_annotation:
+        tweet_fields += ",context_annotations"
     place_fields = "contained_within,country,country_code,full_name,geo,id,name,place_type"
     expansion_fields = "author_id,in_reply_to_user_id"
 
-    # Replace with time period of your choice
-    start_time = '2022-09-28T00:00:00Z'
-
-    # Replace with time period of your choice
-    end_time = '2022-10-06T00:00:00Z'
-
-    # Replace with the maximum number of pages of your choice
-    num_pages=1
-
-    query = 'conversation_id:' + str(tweet_id) + ' lang:en -is:retweet'
+    query = 'conversation_id:' + str(tweet_id) #+ ' lang:en -is:retweet'
+    # query = 'in_reply_to_status_id:' + str(tweet_id)
     print(query)
-
-    tweets = get_tweets(api, query, tweet_fields, user_fields, expansion_fields, start_time, end_time, num_pages)
+    
+    tweets = get_tweets(api, query, tweet_fields, user_fields, expansion_fields, start_time, end_time, num_pages,fetch_context_annotation)
     if tweets:
         print("writing tweets to file, number of tweets=%s"%len(tweets))
         with open(write_file, "wt") as f:
@@ -126,7 +123,7 @@ def api_test():
     fetch_replies(api, tweet_id, './dat/output.txt')
     return
 
-def batch_fetch_replies(credentials, input, output, timestamp):
+def batch_fetch_replies(credentials, input, output, timestamp, start_time, end_time, num_pages,fetch_context_annotation):
     credentials = get_credentials(credentials)
     api = get_API(credentials)
 
@@ -134,7 +131,7 @@ def batch_fetch_replies(credentials, input, output, timestamp):
     for tweet_id in tweet_ids:
         write_file = os.path.join(output, "replies_%s_%s.txt"%(tweet_id, timestamp))
         print('fetching replies for tweet_id=%s and write to=%s'%(tweet_id, write_file))
-        fetch_replies(api, tweet_id, write_file)
+        fetch_replies(api, tweet_id, write_file, start_time, end_time, num_pages,fetch_context_annotation)
     return
 
 def main():
@@ -147,16 +144,25 @@ def main():
     parser.add_argument("credentials", metavar="CREDENTIALS.JSON", help="json file containing twitter credentials")
     parser.add_argument("tweet_ids", metavar="TWEET_IDS.CSV", help="file containing the list of tweet ids")
     parser.add_argument("output", help="output directory to store the output files")
+    parser.add_argument("start_time",help="for example, '2022-09-28T00:00:00Z'")
+    parser.add_argument("end_time",help="for example, '2022-10-10T00:00:00Z'")
+    parser.add_argument("--fetch_context_annotation",action="store_true")
+    parser.add_argument("--num_pages",default=1000)
+    
+                        
     args = parser.parse_args()
 
     credentials = args.credentials
     input = args.tweet_ids
     output = args.output
+    if not os.path.exists(output):
+        os.makedirs(output)
+        
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S.%f")
-    print('args: credentials=%s, input=%s, output=%s timestamp=%s'%(credentials, input, output, timestamp))
-
-    #TODO fetch all replies
-    batch_fetch_replies(credentials, input, output, timestamp)
+    print(timestamp)
+    print('args: credentials=%s, input=%s, output=%s timestamp=%s start_time=%s end_time=%s'%(credentials, input, output, timestamp,args.start_time,args.end_time))
+    
+    batch_fetch_replies(credentials, input, output, timestamp, args.start_time, args.end_time,args.num_pages, args.fetch_context_annotation)
     return
 
 if __name__ == '__main__':
