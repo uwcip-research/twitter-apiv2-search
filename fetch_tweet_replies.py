@@ -117,7 +117,7 @@ def fetch_replies(api, tweet_id, write_file, start_time, end_time, num_pages,fet
     return
 
 def api_test():
-    credentials = get_credentials("englekri_credentials.json")
+    credentials = get_credentials("credentials_englekri.json")
     api = get_API(credentials)
     tweet_id = "1575575350305730560"
     fetch_replies(api, tweet_id, './dat/output.txt')

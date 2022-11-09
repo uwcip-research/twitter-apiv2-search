@@ -16,8 +16,6 @@ from glob import glob
 
 logger = logging.getLogger(__name__)
 
-
-
 def fetch(bearer_token, query, starting, stopping, next_token=None):
     try:
         params = {
@@ -159,7 +157,6 @@ def main(**kwargs):
         except Exception as e:
             logger.error("GENERAL EXCEPTION: {}".format(e))
             logger.error(traceback.format_exc())
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
