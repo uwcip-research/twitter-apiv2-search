@@ -1,3 +1,4 @@
+import numpy as np
 import tweepy
 import time
 import json
@@ -49,8 +50,9 @@ def parse_tweet(tweet, author):
     }
     return obj
 
-def write_to_file(results, output, timestamp, partition_idx):
-    write_file = os.path.join(output, "partition_%s_%s.json.gz" % (partition_idx, timestamp))
+def write_to_file(results, output, timestamp, job_name, partition_idx):
+    write_file = os.path.join(output, "%s_partition_%s_%s.json.gz" % (job_name, partition_idx, timestamp))
+    print('writing to file', write_file)
     with gzip.open(write_file, "wt") as f:
         for tweet in results:
             f.write(json.dumps(tweet, default=str, ensure_ascii=False) + "\n")
@@ -59,8 +61,11 @@ def write_to_file(results, output, timestamp, partition_idx):
 import traceback
 def get_tweets(api, query, output, tweet_fields_, user_fields_, expand_fields_, place_fields_):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S.%f")
-    lines_per_file = query['lines_per_file'] #for testing
+    lines_per_file = query.get('lines_per_file', 10000) #for testing
+    max_users = query.get('max_users', np.Inf)
+    job_name = query.get('name', 'default')
     partition_idx = 0
+    unique_users = set()
     try:
         results = []
         responses = tweepy.Paginator(api.search_all_tweets,
@@ -87,17 +92,23 @@ def get_tweets(api, query, output, tweet_fields_, user_fields_, expand_fields_, 
             for tweet in tweets:
                 author = users.get(tweet["author_id"])  # get user object
                 obj = parse_tweet(tweet, author)
+                unique_users.add(obj['user_id'])
                 results.append(obj)
 
             #write to file
             if len(results)>= lines_per_file:
-                write_to_file(results, output, timestamp, partition_idx)
+                write_to_file(results, output, timestamp, job_name, partition_idx)
                 results = []
                 partition_idx +=1
 
+            #break if we got all the users we need
+            print('number of unique users', len(unique_users))
+            if len(unique_users)>=max_users:
+                break
+
         #write the remaining results
         if len(results)>0:
-            write_to_file(results, output, timestamp, partition_idx)
+            write_to_file(results, output, timestamp, job_name, partition_idx)
 
     except (TypeError, ValueError) as e:
         print('error', e)
