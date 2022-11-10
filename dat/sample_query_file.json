@@ -4,6 +4,7 @@
   "query": "#seattle OR #seahawks OR #seahawks -is:retweet",
   "max_results": 10,
   "max_pages": 2,
+  "lines_per_file": 5,
   "notes": "this is just an example query",
   "other": null
 }

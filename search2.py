@@ -53,13 +53,13 @@ def write_to_file(results, output, timestamp, partition_idx):
     write_file = os.path.join(output, "partition_%s_%s.json.gz" % (partition_idx, timestamp))
     with gzip.open(write_file, "wt") as f:
         for tweet in results:
-            f.write(json.dumps(tweet, default=str) + "\n")
+            f.write(json.dumps(tweet, default=str, ensure_ascii=False) + "\n")
     return
 
 import traceback
 def get_tweets(api, query, output, tweet_fields_, user_fields_, expand_fields_):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S.%f")
-    lines_per_file = 5 #for testing
+    lines_per_file = query['lines_per_file'] #for testing
     partition_idx = 0
     try:
         results = []
@@ -110,11 +110,10 @@ def batch_fetch(credentials_file, query_file, output):
     query = get_json(query_file)
     print(query)
 
-
     user_fields = "created_at,description,entities,id,location,name,protected,public_metrics,url,username,verified,withheld"
     tweet_fields =  "attachments,author_id,conversation_id,created_at,entities,geo,id,in_reply_to_user_id,lang,public_metrics,possibly_sensitive,referenced_tweets,source,text,withheld,reply_settings,context_annotations"
     place_fields = "contained_within,country,country_code,full_name,geo,id,name,place_type"
-    expansion_fields = "author_id,in_reply_to_user_id"
+    expansion_fields = "author_id"#in_reply_to_user_id
 
     get_tweets(api, query, output, tweet_fields, user_fields, expansion_fields)
     return
@@ -152,6 +151,6 @@ def main():
 
 
 if __name__ == '__main__':
-    api_test()
-    # main()
+    # api_test()
+    main()
     pass

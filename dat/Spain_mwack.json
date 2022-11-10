@@ -1,0 +1,9 @@
+{
+    "name": "Spain",
+    "query": "#VamosEspa\u00f1a -#SWE -#Sweden -#GRE -#Greece -#GEO -#Georgia -#KOS -#Kosovo -is:retweet",
+    "start_time": "2022-09-01T00:00:00Z",
+    "end_time": "2022-09-10T00:00:00Z",
+    "max_results": 100,
+    "max_pages": 2,
+    "lines_per_file": 50
+}
