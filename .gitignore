@@ -172,4 +172,5 @@ __pycache__/*
 credentials*
 /dat/*
 bash/*
+.idea
 
