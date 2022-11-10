@@ -57,7 +57,7 @@ def write_to_file(results, output, timestamp, partition_idx):
     return
 
 import traceback
-def get_tweets(api, query, output, tweet_fields_, user_fields_, expand_fields_):
+def get_tweets(api, query, output, tweet_fields_, user_fields_, expand_fields_, place_fields_):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S.%f")
     lines_per_file = query['lines_per_file'] #for testing
     partition_idx = 0
@@ -68,6 +68,7 @@ def get_tweets(api, query, output, tweet_fields_, user_fields_, expand_fields_):
                                      tweet_fields=tweet_fields_,
                                      user_fields=user_fields_,
                                      expansions=expand_fields_,
+                                     place_fields=place_fields_,
                                      start_time=query['start_time'],
                                      end_time=query['end_time'],
                                      max_results=query['max_results'],  # max results per page, highest allowed is 500
@@ -111,16 +112,28 @@ def batch_fetch(credentials_file, query_file, output):
     print(query)
 
     user_fields = "created_at,description,entities,id,location,name,protected,public_metrics,url,username,verified,withheld"
-    tweet_fields =  "attachments,author_id,conversation_id,created_at,entities,geo,id,in_reply_to_user_id,lang,public_metrics,possibly_sensitive,referenced_tweets,source,text,withheld,reply_settings,context_annotations"
-    place_fields = "contained_within,country,country_code,full_name,geo,id,name,place_type"
-    expansion_fields = "author_id"#in_reply_to_user_id
+    user_fields = query.get('user_fields', user_fields)
 
-    get_tweets(api, query, output, tweet_fields, user_fields, expansion_fields)
+    tweet_fields =  "attachments,author_id,conversation_id,created_at,entities,geo,id,in_reply_to_user_id,lang,public_metrics,possibly_sensitive,referenced_tweets,source,text,withheld,reply_settings,context_annotations"
+    tweet_fields = query.get('tweet_fields', tweet_fields)
+
+    expansion_fields = "author_id,in_reply_to_user_id"#
+    expansion_fields = query.get("expansion_fields", expansion_fields)
+
+    place_fields = "contained_within,country,country_code,full_name,geo,id,name,place_type"
+    place_fields = query.get('place_fields', place_fields)
+
+    print('user_fields', user_fields)
+    print('tweet_fields', tweet_fields)
+    print('expansion_fields', expansion_fields)
+    print('place_fields', place_fields)
+
+    get_tweets(api, query, output, tweet_fields, user_fields, expansion_fields, place_fields)
     return
 
 def api_test():
     credentials_file = "credentials_englekri.json"
-    query_file = "dat/sample_query_file.json"
+    query_file = "sample_dat/sample_query_file.json"
     output = "./dat"
     batch_fetch(credentials_file, query_file, output)
     return

@@ -4,6 +4,7 @@
     "start_time": "2022-09-01T00:00:00Z",
     "end_time": "2022-09-10T00:00:00Z",
     "max_results": 100,
-    "max_pages": 2,
-    "lines_per_file": 50
+    "max_pages": 10000,
+    "lines_per_file": 1000,
+    "expansion_fields": "author_id"
 }
