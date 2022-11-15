@@ -46,6 +46,10 @@ def get_expanded_urls(entities):
 
     return ulst
 
+def get_media_view_count(media):
+    if 'public_metrics' not in media:
+        return
+    return media.get("public_metrics").get("view_count", None)
 
 def parse_ref_tweet(tweet):
     # print('>>>>>>>>>>>>>>>. ref tweet', tweet.data)
@@ -56,7 +60,6 @@ def parse_ref_tweet(tweet):
         "tweet": tweet["text"],
         "hashtags": get_hashtags(tweet.get('entities')),
         "urls": get_expanded_urls(tweet.get('entities')),
-        # "urls": [x["expanded_url"] for x in tweet.get("entities", {}).get("urls", [])],
         "source": tweet.get("source", None),
         "language": tweet["lang"],
         "retweet_count": tweet["public_metrics"]["retweet_count"],
@@ -77,9 +80,9 @@ def parse_tweet(tweet, users, **kwargs):
         "created_at": tweet["created_at"],
         "tweet": tweet["text"],
         "entities": tweet.entities,
-        "hashtags": get_hashtags(tweet.get('entities')),
         # "hashtags": [x.get("tag") for x in tweet.get("entities", {}).get("hashtags", [{}])],
         # "urls": [x["expanded_url"] for x in tweet.get("entities", {}).get("urls", [])],
+        "hashtags": get_hashtags(tweet.get('entities')),
         "urls": get_expanded_urls(tweet.get('entities')),
         "source": tweet.get("source", None),
         "language": tweet["lang"],
@@ -123,11 +126,13 @@ def parse_tweet(tweet, users, **kwargs):
             mobjs = []
             for media_key in media_keys:
                 media = includes_media.get(media_key)
-                # print('>>>>>>>>>>>>>media', media.data)
+                if not media:
+                    continue
+                # print('>>>>>>>>>>>>>media', media.data, media.get("public_metrics", {}))
                 mobj = {
                     "media_key": media["media_key"],
                     "media_type": media["type"],
-                    "media_view_count": media["public_metrics"]["view_count"],
+                    "media_view_count": get_media_view_count,
                     "media_height": media.get("height"),
                     "media_width": media.get("width"),
                     "media_url": media.get("url"),
