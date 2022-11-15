@@ -6,6 +6,7 @@ import argparse
 from datetime import datetime
 import os
 import gzip
+from tweepy import Response
 
 def get_json(file_name):
     with open(file_name, 'r') as f:
@@ -16,13 +17,51 @@ def get_API(credentials):
     client = tweepy.Client(bearer_token=credentials['bearer_token'], wait_on_rate_limit=True)
     return client
 
-def parse_tweet(tweet, author):
+
+def get_hashtags(entities):
+    if not entities:
+        return
+
+    hashtags = entities.get('hashtags')
+    if not hashtags:
+        return
+
+    hlst = []
+    for h in hashtags:
+        hlst.append(h['tag'])
+
+    return hlst
+def parse_ref_tweet(tweet):
+    # print('>>>>>>>>>>>>>>>. ref tweet', tweet.data)
     obj = {
         "id": tweet["id"],
         "conversation_id": tweet["conversation_id"],
         "created_at": tweet["created_at"],
         "tweet": tweet["text"],
-        "hashtags": [x["tag"] for x in tweet.get("entities", {}).get("hashtags", [])],
+        "hashtags": get_hashtags(tweet.get('entities')),
+        "urls": [x["expanded_url"] for x in tweet.get("entities", {}).get("urls", [])],
+        "source": tweet.get("source", None),
+        "language": tweet["lang"],
+        "retweet_count": tweet["public_metrics"]["retweet_count"],
+        "reply_count": tweet["public_metrics"]["reply_count"],
+        "like_count": tweet["public_metrics"]["like_count"],
+        "quote_count": tweet["public_metrics"]["quote_count"],
+        "in_reply_to_user_id": tweet.get("in_reply_to_user_id", None),
+        "possibly_sensitive": tweet["possibly_sensitive"],
+        "reply_settings": tweet["reply_settings"],
+    }
+    return obj
+
+def parse_tweet(tweet, users, **kwargs):
+    author = users.get(tweet["author_id"])  # get user object
+    obj = {
+        "id": tweet["id"],
+        "conversation_id": tweet["conversation_id"],
+        "created_at": tweet["created_at"],
+        "tweet": tweet["text"],
+        "entities": tweet.entities,
+        "hashtags": get_hashtags(tweet.get('entities')),
+        # "hashtags": [x.get("tag") for x in tweet.get("entities", {}).get("hashtags", [{}])],
         "urls": [x["expanded_url"] for x in tweet.get("entities", {}).get("urls", [])],
         "source": tweet.get("source", None),
         "language": tweet["lang"],
@@ -48,6 +87,38 @@ def parse_tweet(tweet, author):
         "references": tweet.get("referenced_tweets"),
         "context_annotations": tweet.get("context_annotations", None),
     }
+
+    if kwargs['includes_tweets']:
+        includes_tweets = kwargs['includes_tweets']
+        if tweet['referenced_tweets']:
+            ref_tweets = tweet.get("referenced_tweets")
+            for ref_tweet_dict in ref_tweets:
+                if ref_tweet_dict['id'] in includes_tweets:
+                    ref_tweet_obj = parse_ref_tweet(includes_tweets[ref_tweet_dict['id']])
+                    type = ref_tweet_dict['type']
+                    obj['references_%s'%type] = ref_tweet_obj
+
+    if kwargs['includes_media']:
+        includes_media = kwargs['includes_media']
+        if tweet['attachments'] and tweet['attachments']['media_keys']:
+            media_keys = tweet['attachments']['media_keys']
+            mobjs = []
+            for media_key in media_keys:
+                media = includes_media.get(media_key)
+                # print('>>>>>>>>>>>>>media', media.data)
+                mobj = {
+                    "media_key": media["media_key"],
+                    "media_type": media["type"],
+                    "media_view_count": media["public_metrics"]["view_count"],
+                    "media_height": media.get("height"),
+                    "media_width": media.get("width"),
+                    "media_url": media.get("url"),
+                    "media_preview_image_url": media.get("preview_image_url"),
+                    "media_variants":media.get("variants"),
+                    "media_alt_text": media.get("alt_text")
+                }
+                mobjs.append(mobj)
+            obj['media_objects'] = mobjs
     return obj
 
 def write_to_file(results, output, timestamp, job_name, partition_idx):
@@ -59,7 +130,7 @@ def write_to_file(results, output, timestamp, job_name, partition_idx):
     return
 
 import traceback
-def get_tweets(api, query, output, tweet_fields_, user_fields_, expand_fields_, place_fields_):
+def get_tweets(api, query, output, tweet_fields_, user_fields_, expand_fields_, place_fields_, media_fields_):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S.%f")
     lines_per_file = query.get('lines_per_file', 10000) #for testing
     max_users = query.get('max_users', np.Inf)
@@ -74,6 +145,7 @@ def get_tweets(api, query, output, tweet_fields_, user_fields_, expand_fields_, 
                                      user_fields=user_fields_,
                                      expansions=expand_fields_,
                                      place_fields=place_fields_,
+                                     media_fields=media_fields_,
                                      start_time=query['start_time'],
                                      end_time=query['end_time'],
                                      max_results=query['max_results'],  # max results per page, highest allowed is 500
@@ -87,13 +159,31 @@ def get_tweets(api, query, output, tweet_fields_, user_fields_, expand_fields_, 
                 user_id = user["id"]
                 users[user_id] = user
 
+            includes_media = {}
+            if 'media' in resp.includes:
+                for media in resp.includes['media']:
+                    media_key = media['media_key']
+                    includes_media[media_key] = media
+
+            # extract include tweets
+            includes_tweets = {}
+            if "tweets" in resp.includes:
+                tlist = resp.includes['tweets']
+                for tweet in tlist:
+                    includes_tweets[tweet.id] = tweet
+
+            #TODO probably needs to include logic for place/location too
+
             # loop through regular tweets
             tweets = resp.data
             for tweet in tweets:
-                author = users.get(tweet["author_id"])  # get user object
-                obj = parse_tweet(tweet, author)
-                unique_users.add(obj['user_id'])
-                results.append(obj)
+                try:
+                    obj = parse_tweet(tweet, users, includes_tweets=includes_tweets, includes_media=includes_media)
+                    unique_users.add(obj['user_id'])
+                    results.append(obj)
+                except Exception as e:
+                    print("Unexpected Error", e)
+                    traceback.print_exc()
 
             #write to file
             if len(results)>= lines_per_file:
@@ -109,7 +199,6 @@ def get_tweets(api, query, output, tweet_fields_, user_fields_, expand_fields_, 
         #write the remaining results
         if len(results)>0:
             write_to_file(results, output, timestamp, job_name, partition_idx)
-
     except (TypeError, ValueError) as e:
         print('error', e)
         traceback.print_exc()
@@ -128,18 +217,26 @@ def batch_fetch(credentials_file, query_file, output):
     tweet_fields =  "attachments,author_id,conversation_id,created_at,entities,geo,id,in_reply_to_user_id,lang,public_metrics,possibly_sensitive,referenced_tweets,source,text,withheld,reply_settings,context_annotations"
     tweet_fields = query.get('tweet_fields', tweet_fields)
 
-    expansion_fields = "author_id,in_reply_to_user_id"#
+    expansion_fields = "author_id,in_reply_to_user_id,referenced_tweets.id"
     expansion_fields = query.get("expansion_fields", expansion_fields)
 
-    place_fields = "contained_within,country,country_code,full_name,geo,id,name,place_type"
-    place_fields = query.get('place_fields', place_fields)
+    place_fields = ""
+    if query.get('include_place', False):
+        place_fields = "contained_within,country,country_code,full_name,geo,id,name,place_type"
+        place_fields = query.get('place_fields', place_fields)
+
+    media_fields = ""
+    if query.get('include_media', False):
+        media_fields = "media_key,type,url,duration_ms,height,width,public_metrics,alt_text,variants"
+        media_fields = query.get('place_fields', media_fields)
 
     print('user_fields', user_fields)
     print('tweet_fields', tweet_fields)
     print('expansion_fields', expansion_fields)
     print('place_fields', place_fields)
+    print('media_fields', media_fields)
 
-    get_tweets(api, query, output, tweet_fields, user_fields, expansion_fields, place_fields)
+    get_tweets(api, query, output, tweet_fields, user_fields, expansion_fields, place_fields, media_fields)
     return
 
 def api_test():
