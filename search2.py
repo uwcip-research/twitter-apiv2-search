@@ -31,6 +31,22 @@ def get_hashtags(entities):
         hlst.append(h['tag'])
 
     return hlst
+
+def get_expanded_urls(entities):
+    if not entities:
+        return
+
+    urls = entities.get('urls')
+    if not urls:
+        return
+
+    ulst = []
+    for h in urls:
+        ulst.append(h['expanded_url'])
+
+    return ulst
+
+
 def parse_ref_tweet(tweet):
     # print('>>>>>>>>>>>>>>>. ref tweet', tweet.data)
     obj = {
@@ -39,7 +55,8 @@ def parse_ref_tweet(tweet):
         "created_at": tweet["created_at"],
         "tweet": tweet["text"],
         "hashtags": get_hashtags(tweet.get('entities')),
-        "urls": [x["expanded_url"] for x in tweet.get("entities", {}).get("urls", [])],
+        "urls": get_expanded_urls(tweet.get('entities')),
+        # "urls": [x["expanded_url"] for x in tweet.get("entities", {}).get("urls", [])],
         "source": tweet.get("source", None),
         "language": tweet["lang"],
         "retweet_count": tweet["public_metrics"]["retweet_count"],
@@ -62,7 +79,8 @@ def parse_tweet(tweet, users, **kwargs):
         "entities": tweet.entities,
         "hashtags": get_hashtags(tweet.get('entities')),
         # "hashtags": [x.get("tag") for x in tweet.get("entities", {}).get("hashtags", [{}])],
-        "urls": [x["expanded_url"] for x in tweet.get("entities", {}).get("urls", [])],
+        # "urls": [x["expanded_url"] for x in tweet.get("entities", {}).get("urls", [])],
+        "urls": get_expanded_urls(tweet.get('entities')),
         "source": tweet.get("source", None),
         "language": tweet["lang"],
         "retweet_count": tweet["public_metrics"]["retweet_count"],
