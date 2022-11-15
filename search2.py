@@ -121,7 +121,7 @@ def parse_tweet(tweet, users, **kwargs):
 
     if kwargs['includes_media']:
         includes_media = kwargs['includes_media']
-        if tweet['attachments'] and tweet['attachments']['media_keys']:
+        if "attachments" in tweet and "media_keys" in tweet['attachments']:
             media_keys = tweet['attachments']['media_keys']
             mobjs = []
             for media_key in media_keys:
