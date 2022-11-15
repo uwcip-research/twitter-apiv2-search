@@ -6,6 +6,7 @@ import argparse
 from datetime import datetime
 import os
 import gzip
+import tenacity
 from tweepy import Response
 
 def get_json(file_name):
@@ -132,7 +133,7 @@ def parse_tweet(tweet, users, **kwargs):
                 mobj = {
                     "media_key": media["media_key"],
                     "media_type": media["type"],
-                    "media_view_count": get_media_view_count,
+                    "media_view_count": get_media_view_count(media),
                     "media_height": media.get("height"),
                     "media_width": media.get("width"),
                     "media_url": media.get("url"),
@@ -160,73 +161,87 @@ def get_tweets(api, query, output, tweet_fields_, user_fields_, expand_fields_, 
     job_name = query.get('name', 'default')
     partition_idx = 0
     unique_users = set()
-    try:
-        results = []
-        responses = tweepy.Paginator(api.search_all_tweets,
-                                     query=query['query'],
-                                     tweet_fields=tweet_fields_,
-                                     user_fields=user_fields_,
-                                     expansions=expand_fields_,
-                                     place_fields=place_fields_,
-                                     media_fields=media_fields_,
-                                     start_time=query['start_time'],
-                                     end_time=query['end_time'],
-                                     max_results=query['max_results'],  # max results per page, highest allowed is 500
-                                     limit=query['max_pages']  # max number of pages to return
-                                     )
+    pagination_token = None
+    max_retries = 3
+    retry_count = 0
+    while True:
+        try:
+            results = []
+            responses = tweepy.Paginator(api.search_all_tweets,
+                                         query=query['query'],
+                                         pagination_token=pagination_token,
+                                         tweet_fields=tweet_fields_,
+                                         user_fields=user_fields_,
+                                         expansions=expand_fields_,
+                                         place_fields=place_fields_,
+                                         media_fields=media_fields_,
+                                         start_time=query['start_time'],
+                                         end_time=query['end_time'],
+                                         max_results=query['max_results'],  # max results per page, highest allowed is 500
+                                         limit=query['max_pages']  # max number of pages to return
+                                         )
 
-        for resp in responses:  # loop through each tweepy.Response field
-            # get all the users from includes
-            users = {}  # keyed by user id
-            for user in resp.includes['users']:
-                user_id = user["id"]
-                users[user_id] = user
+            for resp in responses:  # loop through each tweepy.Response field
+                if "pagination_token" in resp.meta:
+                    pagination_token = resp.meta['pagination_token']
+                else:
+                    pagination_token = None
 
-            includes_media = {}
-            if 'media' in resp.includes:
-                for media in resp.includes['media']:
-                    media_key = media['media_key']
-                    includes_media[media_key] = media
+                # get all the users from includes
+                users = {}  # keyed by user id
+                for user in resp.includes['users']:
+                    user_id = user["id"]
+                    users[user_id] = user
 
-            # extract include tweets
-            includes_tweets = {}
-            if "tweets" in resp.includes:
-                tlist = resp.includes['tweets']
-                for tweet in tlist:
-                    includes_tweets[tweet.id] = tweet
+                includes_media = {}
+                if 'media' in resp.includes:
+                    for media in resp.includes['media']:
+                        media_key = media['media_key']
+                        includes_media[media_key] = media
 
-            #TODO probably needs to include logic for place/location too
+                # extract include tweets
+                includes_tweets = {}
+                if "tweets" in resp.includes:
+                    tlist = resp.includes['tweets']
+                    for tweet in tlist:
+                        includes_tweets[tweet.id] = tweet
 
-            # loop through regular tweets
-            tweets = resp.data
-            for tweet in tweets:
-                try:
-                    obj = parse_tweet(tweet, users, includes_tweets=includes_tweets, includes_media=includes_media)
-                    unique_users.add(obj['user_id'])
-                    results.append(obj)
-                except Exception as e:
-                    print("Unexpected Error", e)
-                    traceback.print_exc()
+                #TODO probably needs to include logic for place/location too
 
-            #write to file
-            if len(results)>= lines_per_file:
+                # loop through regular tweets
+                tweets = resp.data
+                for tweet in tweets:
+                    try:
+                        obj = parse_tweet(tweet, users, includes_tweets=includes_tweets, includes_media=includes_media)
+                        unique_users.add(obj['user_id'])
+                        results.append(obj)
+                    except Exception as e:
+                        print(">>>>>Error Parsing Tweet", e, tweet.data)
+                        traceback.print_exc()
+
+                #write to file
+                if len(results)>= lines_per_file:
+                    write_to_file(results, output, timestamp, job_name, partition_idx)
+                    results = []
+                    partition_idx +=1
+
+                #break if we got all the users we need
+                print('number of unique users', len(unique_users))
+                if len(unique_users)>=max_users:
+                    break
+
+            #write the remaining results
+            if len(results)>0:
                 write_to_file(results, output, timestamp, job_name, partition_idx)
-                results = []
-                partition_idx +=1
-
-            #break if we got all the users we need
-            print('number of unique users', len(unique_users))
-            if len(unique_users)>=max_users:
-                break
-
-        #write the remaining results
-        if len(results)>0:
-            write_to_file(results, output, timestamp, job_name, partition_idx)
-    except (TypeError, ValueError) as e:
-        print('error', e)
-        traceback.print_exc()
-        time.sleep(10)
-        return
+            break
+        except Exception as e:
+            print('>>>>>>>>>>>>>>>>>>>>>Error', e)
+            traceback.print_exc()
+            if retry_count>=max_retries:
+                return
+            retry_count+=1
+            time.sleep(60)
+            continue
 
 def batch_fetch(credentials_file, query_file, output):
     credentials = get_json(credentials_file)
