@@ -133,7 +133,7 @@ def parse_tweet(tweet, users, **kwargs):
                 mobj = {
                     "media_key": media["media_key"],
                     "media_type": media["type"],
-                    "media_view_count": get_media_view_count(media),
+                    "media_view_count": get_media_view_count,
                     "media_height": media.get("height"),
                     "media_width": media.get("width"),
                     "media_url": media.get("url"),
@@ -185,7 +185,7 @@ def get_tweets(api, query, output, tweet_fields_, user_fields_, expand_fields_, 
                 if "pagination_token" in resp.meta:
                     pagination_token = resp.meta['pagination_token']
                 else:
-                    pagination_token = None
+                    pagination_token
 
                 # get all the users from includes
                 users = {}  # keyed by user id
@@ -216,7 +216,7 @@ def get_tweets(api, query, output, tweet_fields_, user_fields_, expand_fields_, 
                         unique_users.add(obj['user_id'])
                         results.append(obj)
                     except Exception as e:
-                        print(">>>>>Error Parsing Tweet", e, tweet.data)
+                        print(">>>>Error Parsing Tweet", e, tweet.data)
                         traceback.print_exc()
 
                 #write to file
