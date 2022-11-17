@@ -279,7 +279,7 @@ def batch_fetch(credentials_file, query_file, output):
 
 def api_test():
     credentials_file = "credentials_englekri.json"
-    query_file = "sample_dat/sample_query_file.json"
+    query_file = "samples/sample_query_files/sample_query_file.json"
     output = "./dat"
     batch_fetch(credentials_file, query_file, output)
     return

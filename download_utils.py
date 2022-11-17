@@ -7,8 +7,8 @@ import argparse
 import tenacity
 
 import socket
-print(socket.gethostname())
-if socket.gethostname()=="earth":
+print('socket_name', socket.gethostname())
+if socket.gethostname()=="earth": #check to see if running on our infrastructure
     #set env variables for proxy to not get banned
     os.environ["http_proxy"] = "http://proxy.lab.cip.uw.edu:3128"
     os.environ["https_proxy"] = "http://proxy.lab.cip.uw.edu:3128"
@@ -17,6 +17,7 @@ from fake_useragent import UserAgent
 ua = UserAgent()
 
 def get_rotating_headers():
+    #set header to be less bot like
     header = {
         "Connection": "keep-alive",
         "Accept-Encoding": "gzip, deflate, br",
@@ -35,9 +36,8 @@ def download_image(url, file_path):
     return
 
 def download_video(url, file_path):
-    #TODO, same as image; quality?; size?
     headers = get_rotating_headers()
-    resp = requests.get(url, allow_redirects=True, headers=headers)
+    resp = requests.get(url, allow_redirects=True, stream=True, headers=headers)
     with open(file_path, 'wb') as f:
         for chunk in resp.iter_content(chunk_size=1024 * 1024):
             if chunk:
@@ -72,11 +72,11 @@ def batch_download(input, output, input_type):
                     download_image(url, file_name)
                 else:
                     download_video(url, file_name)
-                time.sleep(2)
+                time.sleep(5)
                 break
             except Exception as e:
                 print('error downloading', e, url, file_name)
-                time.sleep(60)
+                time.sleep(60 * (retry+1))
                 if retry>=max_retry:
                     break
                 retry+=1
@@ -84,7 +84,6 @@ def batch_download(input, output, input_type):
     return
 
 def sample_download_image():
-    # url = "https://www.liveeatlearn.com/wp-content/uploads/2018/04/carrot-on-white-1-650x411.jpg"
     url = "https://pbs.twimg.com/media/FhhP3umXEAIlzbN.jpg"
     file_name = url.split("/")[-1]
     if "." not in url[-5:]:
@@ -101,14 +100,15 @@ def sample_download_video():
     download_video(url, file_name)
     return
 
-def sample():
+def sample_downloads():
     sample_download_image()
     sample_download_video()
     return
 
 def main():
+    #TODO, I only tested this script using twitter data
     parser = argparse.ArgumentParser(
-        prog="stream2",
+        prog="download_util",
         formatter_class=argparse.RawTextHelpFormatter,
         description=__doc__,
     )
@@ -129,5 +129,6 @@ def main():
     return
 
 if __name__ == '__main__':
+    # sample_downloads()
     main()
     pass

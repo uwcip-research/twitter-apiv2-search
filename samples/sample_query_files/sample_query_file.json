@@ -1,12 +1,13 @@
 {
+  "name": "sample_json",
   "start_time": "2022-10-01T00:00:00Z",
   "end_time": "2022-11-01T00:00:00Z",
   "query": "#seattle OR #seahawks OR #seahawks -is:retweet",
   "max_results": 10,
   "max_pages": 2,
   "lines_per_file": 5,
-  "name": "sample_json",
-  "notes": "this is just an example query",
+  "include_media": true,
+  "notes": "this is just an example query for using the search2.py",
   "other": null
 }
 
