@@ -1,3 +1,5 @@
+import sys
+
 import numpy as np
 import tweepy
 import time
@@ -8,6 +10,18 @@ import os
 import gzip
 import tenacity
 from tweepy import Response
+
+import logging
+logger = logging.getLogger(__name__)
+from logging.handlers import RotatingFileHandler
+logging.captureWarnings(True)
+logger = logging.getLogger(__name__)
+log_path = "logs/logs_%s_%s.txt"%(__file__, time.time())
+print('log_path', log_path)
+log_handler2 = RotatingFileHandler(log_path, maxBytes=200000, backupCount=5)
+log_handler2.setFormatter(logging.Formatter("%(asctime)s %(levelname)-8s - %(message)s"))
+logger.addHandler(log_handler2)
+logger.setLevel(logging.INFO)
 
 def get_json(file_name):
     with open(file_name, 'r') as f:
@@ -217,6 +231,7 @@ def get_tweets(api, query, output, tweet_fields_, user_fields_, expand_fields_, 
                         results.append(obj)
                     except Exception as e:
                         print(">>>>>Error Parsing Tweet", e, tweet.data)
+                        logger.error("error=%s, tweet=%s"%(e, tweet.data))
                         traceback.print_exc()
 
                 #write to file
@@ -237,6 +252,7 @@ def get_tweets(api, query, output, tweet_fields_, user_fields_, expand_fields_, 
         except Exception as e:
             print('>>>>>>>>>>>>>>>>>>>>>Error', e)
             traceback.print_exc()
+            logger.error("error=%s"%(e))
             if retry_count>=max_retries:
                 return
             retry_count+=1
@@ -285,6 +301,7 @@ def api_test():
     return
 
 def main():
+    #This is a more flexible version of search.py; also uses tweepy here
     parser = argparse.ArgumentParser(
         prog="stream-debug",
         formatter_class=argparse.RawTextHelpFormatter,

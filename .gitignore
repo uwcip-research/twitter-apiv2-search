@@ -169,9 +169,11 @@ searches/
 .ipynb_checkpoints/*
 __pycache__
 __pycache__/*
-credentials*
+credentials_*
 /dat/*
 bash/*
 .idea
 parsing
-
+*.jpg
+*.mp4
+logs/*
