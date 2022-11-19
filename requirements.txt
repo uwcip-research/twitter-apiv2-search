@@ -1,4 +1,4 @@
 tweepy
 pandas
 tenacity
-fake-useragent
+fake-useragent==0.1.14

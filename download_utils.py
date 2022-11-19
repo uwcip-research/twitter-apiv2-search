@@ -1,20 +1,34 @@
 import os
+import traceback
+
+import requests
+import socket
 import time
 
-import pandas as pd
-import requests
-import argparse
-import tenacity
-
-import socket
-print('socket_name', socket.gethostname())
-if socket.gethostname()=="earth": #check to see if running on our infrastructure
-    #set env variables for proxy to not get banned
-    os.environ["http_proxy"] = "http://proxy.lab.cip.uw.edu:3128"
-    os.environ["https_proxy"] = "http://proxy.lab.cip.uw.edu:3128"
+import logging
+logger = logging.getLogger(__name__)
+from logging.handlers import RotatingFileHandler
+logging.captureWarnings(True)
+logger = logging.getLogger(__name__)
+log_path = "logs/logs_download_utils_%s.txt"%(time.time())
+print('log_path', log_path)
+log_handler2 = RotatingFileHandler(log_path, maxBytes=200000, backupCount=5)
+log_handler2.setFormatter(logging.Formatter("%(asctime)s %(levelname)-8s - %(message)s"))
+logger.addHandler(log_handler2)
+logger.setLevel(logging.INFO)
 
 from fake_useragent import UserAgent
 ua = UserAgent()
+
+def set_proxies():
+    # check to see if running on our infrastructure
+    if socket.gethostname() in ['earth', 'luna']:
+        # set env variables for proxy to not get banned
+        print("setting proxies")
+        logger.info("setting proxies")
+        os.environ["http_proxy"] = "http://proxy.lab.cip.uw.edu:3128"
+        os.environ["https_proxy"] = "http://proxy.lab.cip.uw.edu:3128"
+    return
 
 def get_rotating_headers():
     #set header to be less bot like
@@ -44,19 +58,12 @@ def download_video(url, file_path):
                 f.write(chunk)
     return
 
-def read_urls(file_name):
-    urls = []
-    with open(file_name, 'r') as f:
-        for line in f.readlines():
-            if line.startswith("http"):
-                urls.append(line.strip())
-    return urls
-
-def batch_download(input, output, input_type):
-    urls = read_urls(input)
+def batch_download(urls, output, input_type, sleep_time=5):
     print('total number of urls', len(urls))
     max_retry = 3
     for url in urls:
+        if not url.startswith("http"):
+            continue
         file_name = url.split("/")[-1]
         file_extension = ".jpg" if input_type=='image' else '.mp4'
         if "." not in url[-5:]:
@@ -72,10 +79,13 @@ def batch_download(input, output, input_type):
                     download_image(url, file_name)
                 else:
                     download_video(url, file_name)
-                time.sleep(5)
+                time.sleep(sleep_time)
                 break
             except Exception as e:
                 print('error downloading', e, url, file_name)
+                traceback.print_exc()
+                logger.error(e)
+                logger.error(traceback.extract_tb())
                 time.sleep(60 * (retry+1))
                 if retry>=max_retry:
                     break
@@ -101,34 +111,7 @@ def sample_download_video():
     return
 
 def sample_downloads():
+    set_proxies()
     sample_download_image()
     sample_download_video()
     return
-
-def main():
-    #TODO, I only tested this script using twitter data
-    parser = argparse.ArgumentParser(
-        prog="download_util",
-        formatter_class=argparse.RawTextHelpFormatter,
-        description=__doc__,
-    )
-    parser.add_argument("input", metavar="INPUT.TXT", help="file containing urls for downloading")
-    parser.add_argument("type", help="url type: 1) image or 2) video")
-    parser.add_argument("output", help="output directory to store the output files")
-
-    args = parser.parse_args()
-
-    input = args.input
-    input_type = args.type
-    output = args.output
-    if not os.path.exists(output):
-        os.makedirs(output)
-
-    print('args: input=%s, input_type=%s, output=%s' % (input, input_type, output))
-    batch_download(input, output, input_type)
-    return
-
-if __name__ == '__main__':
-    # sample_downloads()
-    main()
-    pass
