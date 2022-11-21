@@ -197,8 +197,9 @@ def get_tweets(credentials, query, output, tweet_fields_, user_fields_, expand_f
                                          )
 
             for resp in responses:  # loop through each tweepy.Response field
-                if "pagination_token" in resp.meta:
-                    pagination_token = resp.meta['pagination_token']
+                # print(resp.meta)
+                if "next_token" in resp.meta:
+                    pagination_token = resp.meta['next_token']
                 else:
                     pagination_token = None
 
