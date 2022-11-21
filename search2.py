@@ -12,11 +12,10 @@ import tenacity
 from tweepy import Response
 
 import logging
-logger = logging.getLogger(__name__)
-from logging.handlers import RotatingFileHandler
 logging.captureWarnings(True)
 logger = logging.getLogger(__name__)
-log_path = "logs/logs_%s_%s.txt"%(__file__, time.time())
+from logging.handlers import RotatingFileHandler
+log_path = "logs/logs_search2_%s.txt"%(time.time())
 print('log_path', log_path)
 log_handler2 = RotatingFileHandler(log_path, maxBytes=200000, backupCount=5)
 log_handler2.setFormatter(logging.Formatter("%(asctime)s %(levelname)-8s - %(message)s"))
@@ -168,14 +167,16 @@ def write_to_file(results, output, timestamp, job_name, partition_idx):
     return
 
 import traceback
-def get_tweets(api, query, output, tweet_fields_, user_fields_, expand_fields_, place_fields_, media_fields_):
+def get_tweets(credentials, query, output, tweet_fields_, user_fields_, expand_fields_, place_fields_, media_fields_):
+    api = get_API(credentials)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S.%f")
     lines_per_file = query.get('lines_per_file', 10000) #for testing
     max_users = query.get('max_users', np.Inf)
+    pagination_token = query.get("pagination_token", None)
     job_name = query.get('name', 'default')
     partition_idx = 0
     unique_users = set()
-    pagination_token = None
+
     max_retries = 3
     retry_count = 0
     while True:
@@ -200,6 +201,9 @@ def get_tweets(api, query, output, tweet_fields_, user_fields_, expand_fields_, 
                     pagination_token = resp.meta['pagination_token']
                 else:
                     pagination_token = None
+
+                logger.info("pagination_token=%s"%pagination_token)
+                print("pagination_token=%s"%pagination_token)
 
                 # get all the users from includes
                 users = {}  # keyed by user id
@@ -251,17 +255,16 @@ def get_tweets(api, query, output, tweet_fields_, user_fields_, expand_fields_, 
             break
         except Exception as e:
             print('>>>>>>>>>>>>>>>>>>>>>Error', e)
-            traceback.print_exc()
             logger.error("error=%s"%(e))
             if retry_count>=max_retries:
                 return
             retry_count+=1
-            time.sleep(60)
+            time.sleep(60 * (retry_count+1))
+            api = get_API(credentials)
             continue
 
 def batch_fetch(credentials_file, query_file, output):
     credentials = get_json(credentials_file)
-    api = get_API(credentials)
     query = get_json(query_file)
     print(query)
 
@@ -290,7 +293,7 @@ def batch_fetch(credentials_file, query_file, output):
     print('place_fields', place_fields)
     print('media_fields', media_fields)
 
-    get_tweets(api, query, output, tweet_fields, user_fields, expansion_fields, place_fields, media_fields)
+    get_tweets(credentials, query, output, tweet_fields, user_fields, expansion_fields, place_fields, media_fields)
     return
 
 def api_test():

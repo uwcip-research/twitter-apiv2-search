@@ -6,10 +6,9 @@ import socket
 import time
 
 import logging
-logger = logging.getLogger(__name__)
-from logging.handlers import RotatingFileHandler
 logging.captureWarnings(True)
 logger = logging.getLogger(__name__)
+from logging.handlers import RotatingFileHandler
 log_path = "logs/logs_download_utils_%s.txt"%(time.time())
 print('log_path', log_path)
 log_handler2 = RotatingFileHandler(log_path, maxBytes=200000, backupCount=5)
