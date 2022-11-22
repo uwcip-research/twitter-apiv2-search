@@ -185,7 +185,7 @@ def get_tweets(credentials, query, output, tweet_fields_, user_fields_, expand_f
             results = []
             responses = tweepy.Paginator(api.search_all_tweets,
                                          query=query['query'],
-                                         next_token=pagination_token,
+                                         pagination_token=pagination_token,
                                          tweet_fields=tweet_fields_,
                                          user_fields=user_fields_,
                                          expansions=expand_fields_,
