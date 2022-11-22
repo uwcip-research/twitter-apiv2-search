@@ -271,6 +271,7 @@ def batch_fetch(credentials_file, query_file, output):
     credentials = get_json(credentials_file)
     query = get_json(query_file)
     print(query)
+    logger.info('query=%s'%query)
 
     user_fields = "created_at,description,entities,id,location,name,protected,public_metrics,url,username,verified,withheld"
     user_fields = query.get('user_fields', user_fields)
@@ -328,6 +329,7 @@ def main():
         os.makedirs(output)
 
     print('args: credentials=%s, query_file=%s, output=%s' % (credentials_file, query_file, output))
+    logger.info('args: credentials=%s, query_file=%s, output=%s' % (credentials_file, query_file, output))
 
     batch_fetch(credentials_file, query_file, output)
     return
