@@ -170,13 +170,14 @@ import traceback
 def get_tweets(credentials, query, output, tweet_fields_, user_fields_, expand_fields_, place_fields_, media_fields_):
     api = get_API(credentials)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S.%f")
+
     lines_per_file = query.get('lines_per_file', 10000) #for testing
     max_users = query.get('max_users', np.Inf)
     pagination_token = query.get("pagination_token", None)
     job_name = query.get('name', 'default')
+
     partition_idx = 0
     unique_users = set()
-
     max_retries = 3
     retry_count = 0
     while True:
@@ -184,7 +185,7 @@ def get_tweets(credentials, query, output, tweet_fields_, user_fields_, expand_f
             results = []
             responses = tweepy.Paginator(api.search_all_tweets,
                                          query=query['query'],
-                                         pagination_token=pagination_token,
+                                         next_token=pagination_token,
                                          tweet_fields=tweet_fields_,
                                          user_fields=user_fields_,
                                          expansions=expand_fields_,
@@ -271,6 +272,7 @@ def batch_fetch(credentials_file, query_file, output):
     credentials = get_json(credentials_file)
     query = get_json(query_file)
     print(query)
+    logger.info('query=%s'%query)
 
     user_fields = "created_at,description,entities,id,location,name,protected,public_metrics,url,username,verified,withheld"
     user_fields = query.get('user_fields', user_fields)
@@ -328,6 +330,7 @@ def main():
         os.makedirs(output)
 
     print('args: credentials=%s, query_file=%s, output=%s' % (credentials_file, query_file, output))
+    logger.info('args: credentials=%s, query_file=%s, output=%s' % (credentials_file, query_file, output))
 
     batch_fetch(credentials_file, query_file, output)
     return
