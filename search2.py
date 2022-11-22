@@ -250,6 +250,9 @@ def get_tweets(credentials, query, output, tweet_fields_, user_fields_, expand_f
                 if len(unique_users)>=max_users:
                     break
 
+                #reset retry after each successful fetch
+                retry_count = 0
+
             #write the remaining results
             if len(results)>0:
                 write_to_file(results, output, timestamp, job_name, partition_idx)
