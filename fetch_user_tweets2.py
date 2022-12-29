@@ -192,11 +192,13 @@ def get_tweets(credentials, account_id, query, output, tweet_fields_, user_field
                                          media_fields=media_fields_,
                                          start_time=query['start_time'],
                                          end_time=query['end_time'],
-                                         max_results=query['max_results'],  # max results per page, highest allowed is 500
+                                         max_results=query['max_results'],  # max results per page, highest allowed is 100
                                          limit=query['max_pages']  # max number of pages to return
                                          )
 
             for resp in responses:  # loop through each tweepy.Response field
+                if resp.data is None:
+                    continue
                 # print(resp.meta)
                 if "next_token" in resp.meta:
                     pagination_token = resp.meta['next_token']
@@ -253,7 +255,8 @@ def get_tweets(credentials, account_id, query, output, tweet_fields_, user_field
             break
         except Exception as e:
             print('>>>>>>>>>>>>>>>>>>>>>Error', e)
-            logger.error("error=%s"%(e))
+            traceback.print_exc()
+            logger.error("account_id=%s, error=%s, payload=%s"%(account_id, e, resp.data))
             if retry_count>=max_retries:
                 return
             retry_count+=1
