@@ -33,14 +33,44 @@ def get_tweet_ids(file_name):
             tweet_ids.append(line.strip())
     return tweet_ids
 
+def get_hashtags(entities):
+    if not entities:
+        return
+
+    hashtags = entities.get('hashtags')
+    if not hashtags:
+        return
+
+    hlst = []
+    for h in hashtags:
+        hlst.append(h['tag'])
+
+    return hlst
+
+def get_expanded_urls(entities):
+    if not entities:
+        return
+
+    urls = entities.get('urls')
+    if not urls:
+        return
+
+    ulst = []
+    for h in urls:
+        ulst.append(h['expanded_url'])
+
+    return ulst
+
 def parse_tweet(tweet, author):
     obj = {
         "id": tweet["id"],
         "conversation_id": tweet["conversation_id"],
         "created_at": tweet["created_at"],
         "tweet": tweet["text"],
-        "hashtags": [x["tag"] for x in tweet.get("entities", {}).get("hashtags", [])],
-        "urls": [x["expanded_url"] for x in tweet.get("entities", {}).get("urls", [])],
+        # "hashtags": [x["tag"] for x in tweet.get("entities", {}).get("hashtags", [])],
+        # "urls": [x["expanded_url"] for x in tweet.get("entities", {}).get("urls", [])],
+        "hashtags": get_hashtags(tweet.get('entities')),
+        "urls": get_expanded_urls(tweet.get('entities')),
         "source": tweet.get("source", None),
         "language": tweet["lang"],
         "retweet_count": tweet["public_metrics"]["retweet_count"],
