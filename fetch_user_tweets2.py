@@ -246,8 +246,8 @@ def get_tweets(credentials, account_id, query, output, tweet_fields_, user_field
                     results = []
                     partition_idx +=1
 
-                #reset retry after each successful fetch
-                retry_count = 0
+            #reset retry after each successful fetch
+            retry_count = 0
 
             #write the remaining results
             if len(results)>0:

@@ -4,6 +4,18 @@ import json
 import argparse
 from datetime import datetime
 import os
+import gzip
+
+import logging
+logging.captureWarnings(True)
+logger = logging.getLogger(__name__)
+from logging.handlers import RotatingFileHandler
+log_path = "logs/logs_fetch_tweet_replies_%s.txt"%(time.time())
+print('log_path', log_path)
+log_handler2 = RotatingFileHandler(log_path, maxBytes=200000, backupCount=5)
+log_handler2.setFormatter(logging.Formatter("%(asctime)s %(levelname)-8s - %(message)s"))
+logger.addHandler(log_handler2)
+logger.setLevel(logging.INFO)
 
 def get_credentials(file_name):
     with open(file_name, 'r') as f:
@@ -56,7 +68,7 @@ def parse_tweet(tweet, author):
     return obj
 
 import traceback
-def get_tweets(api, query, tweet_fields_, user_fields_, expand_fields_, start_time_, end_time_, num_pages, fetch_context_annotation):    
+def get_tweets(api, query, tweet_fields_, user_fields_, expand_fields_, start_time_, end_time_, num_pages, fetch_context_annotation):
     if fetch_context_annotation:
         max_results=100
     else:
@@ -77,6 +89,9 @@ def get_tweets(api, query, tweet_fields_, user_fields_, expand_fields_, start_ti
         
         for resp in responses: #loop through each tweepy.Response field
             #get all the users from includes
+            if resp.data is None:
+                continue
+            # print('resp.data', resp.data)
             users = {}  # keyed by user id
             for user in resp.includes['users']:
                 user_id = user["id"]
@@ -91,8 +106,10 @@ def get_tweets(api, query, tweet_fields_, user_fields_, expand_fields_, start_ti
                 results.append(obj)
         return results
     except (TypeError, ValueError) as e:
-        print('error', e)
+        print('error=%s, query=%s'%(e, query))
         traceback.print_exc()
+        logger.error('error=%s, query=%s'%(e, query))
+        logger.error(traceback.extract_tb())
         time.sleep(10)
         return
 
@@ -101,17 +118,14 @@ def fetch_replies(api, tweet_id, write_file, start_time, end_time, num_pages,fet
     tweet_fields =  "attachments,author_id,conversation_id,created_at,entities,geo,id,in_reply_to_user_id,lang,public_metrics,possibly_sensitive,referenced_tweets,source,text,withheld,reply_settings"
     if fetch_context_annotation:
         tweet_fields += ",context_annotations"
-    place_fields = "contained_within,country,country_code,full_name,geo,id,name,place_type"
     expansion_fields = "author_id,in_reply_to_user_id"
 
     query = 'conversation_id:' + str(tweet_id) #+ ' lang:en -is:retweet'
-    # query = 'in_reply_to_status_id:' + str(tweet_id)
-    print(query)
-    
-    tweets = get_tweets(api, query, tweet_fields, user_fields, expansion_fields, start_time, end_time, num_pages,fetch_context_annotation)
+    tweets = get_tweets(api, query, tweet_fields, user_fields, expansion_fields, start_time, end_time, num_pages, fetch_context_annotation)
     if tweets:
         print("writing tweets to file, number of tweets=%s"%len(tweets))
-        with open(write_file, "wt") as f:
+        logger.info("writing tweets to file, number of tweets=%s"%len(tweets))
+        with gzip.open(write_file, "wt") as f:
             for tweet in tweets:
                 f.write(json.dumps(tweet, default=str) + "\n")
     return
@@ -123,14 +137,18 @@ def api_test():
     fetch_replies(api, tweet_id, './dat/output.txt')
     return
 
-def batch_fetch_replies(credentials, input, output, timestamp, start_time, end_time, num_pages,fetch_context_annotation):
+def batch_fetch_replies(credentials, input, output, start_time, end_time, num_pages,fetch_context_annotation):
     credentials = get_credentials(credentials)
     api = get_API(credentials)
 
     tweet_ids = get_tweet_ids(input)
+    logger.info("fetching %s coverstations"%(len(tweet_ids)))
     for tweet_id in tweet_ids:
-        write_file = os.path.join(output, "replies_%s_%s.txt"%(tweet_id, timestamp))
+        write_file = os.path.join(output, "replies_%s.json.gz"%(tweet_id))
+        if os.path.exists(write_file): #TODO file already exists
+            continue
         print('fetching replies for tweet_id=%s and write to=%s'%(tweet_id, write_file))
+        logger.info('fetching replies for tweet_id=%s and write to=%s'%(tweet_id, write_file))
         fetch_replies(api, tweet_id, write_file, start_time, end_time, num_pages,fetch_context_annotation)
     return
 
@@ -144,11 +162,10 @@ def main():
     parser.add_argument("credentials", metavar="CREDENTIALS.JSON", help="json file containing twitter credentials")
     parser.add_argument("tweet_ids", metavar="TWEET_IDS.CSV", help="file containing the list of tweet ids")
     parser.add_argument("output", help="output directory to store the output files")
-    parser.add_argument("start_time",help="for example, '2022-09-28T00:00:00Z'")
-    parser.add_argument("end_time",help="for example, '2022-10-10T00:00:00Z'")
-    parser.add_argument("--fetch_context_annotation",action="store_true")
+    parser.add_argument("start_time", help="for example, '2022-09-28T00:00:00Z'")
+    parser.add_argument("end_time", help="for example, '2022-10-10T00:00:00Z'")
+    parser.add_argument("--fetch_context_annotation", action="store_true", default=False)
     parser.add_argument("--num_pages",default=1000)
-    
                         
     args = parser.parse_args()
 
@@ -157,12 +174,10 @@ def main():
     output = args.output
     if not os.path.exists(output):
         os.makedirs(output)
-        
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S.%f")
-    print(timestamp)
-    print('args: credentials=%s, input=%s, output=%s timestamp=%s start_time=%s end_time=%s'%(credentials, input, output, timestamp,args.start_time,args.end_time))
-    
-    batch_fetch_replies(credentials, input, output, timestamp, args.start_time, args.end_time,args.num_pages, args.fetch_context_annotation)
+
+    print('args: credentials=%s, input=%s, output=%s start_time=%s end_time=%s, fetch_annotation=%s'%(credentials, input, output, args.start_time, args.end_time, args.fetch_context_annotation))
+
+    batch_fetch_replies(credentials, input, output, args.start_time, args.end_time,args.num_pages, args.fetch_context_annotation)
     return
 
 if __name__ == '__main__':
