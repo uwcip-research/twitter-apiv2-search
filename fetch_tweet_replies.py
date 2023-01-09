@@ -158,6 +158,9 @@ def fetch_replies(api, tweet_id, write_file, start_time, end_time, num_pages,fet
         with gzip.open(write_file, "wt") as f:
             for tweet in tweets:
                 f.write(json.dumps(tweet, default=str) + "\n")
+    else:
+        with gzip.open(write_file, "wt") as f:
+            f.write("{}")
     return
 
 def api_test():
