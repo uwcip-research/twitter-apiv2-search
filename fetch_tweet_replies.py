@@ -134,6 +134,7 @@ def get_tweets(api, query, tweet_fields_, user_fields_, expand_fields_, start_ti
                 obj = parse_tweet(tweet, author)
                 # print('obj', obj)
                 results.append(obj)
+            time.sleep(1)#rate limit
         return results
     except (TypeError, ValueError) as e:
         print('error=%s, query=%s'%(e, query))
