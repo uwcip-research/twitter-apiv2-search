@@ -15,7 +15,7 @@ import logging
 logging.captureWarnings(True)
 logger = logging.getLogger(__name__)
 from logging.handlers import RotatingFileHandler
-log_path = "logs/logs_search2_%s.txt"%(time.time())
+log_path = "logs/logs_fetch_tweets_by_ids_%s.txt"%(time.time())
 print('log_path', log_path)
 log_handler2 = RotatingFileHandler(log_path, maxBytes=200000, backupCount=5)
 log_handler2.setFormatter(logging.Formatter("%(asctime)s %(levelname)-8s - %(message)s"))
@@ -158,54 +158,49 @@ def parse_tweet(tweet, users, **kwargs):
             obj['media_objects'] = mobjs
     return obj
 
-def write_to_file(results, output, timestamp, job_name, partition_idx):
-    write_file = os.path.join(output, "%s_partition_%s_%s.json.gz" % (job_name, partition_idx, timestamp))
+def write_to_file(results, output, timestamp, job_name, idx):
+    write_file = os.path.join(output, "%s_%s_%s.json.gz" % (job_name, timestamp, idx))
     print('writing to file', write_file)
     with gzip.open(write_file, "wt") as f:
         for tweet in results:
             f.write(json.dumps(tweet, default=str, ensure_ascii=False) + "\n")
     return
 
+def get_tweet_ids(file_name):
+    with open(file_name, 'r') as f:
+        ids = [x.strip() for x in f.readlines()]
+        return ids
+
+def chunk_it(lst, chunk_size=100):
+    for i in range(0, len(lst), chunk_size):
+        yield lst[i:i + chunk_size]
+
 import traceback
-def get_tweets(credentials, query, output, tweet_fields_, user_fields_, expand_fields_, place_fields_, media_fields_):
+def get_tweets(credentials, query, input, output, tweet_fields_, user_fields_, expand_fields_, place_fields_, media_fields_):
     api = get_API(credentials)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S.%f")
-
-    lines_per_file = query.get('lines_per_file', 10000) #for testing
-    max_users = query.get('max_users', np.Inf)
-    pagination_token = query.get("pagination_token", None)
     job_name = query.get('name', 'default')
+    lines_per_file = query.get('lines_per_file', 10000) #for testing
+    tweet_ids_all = get_tweet_ids(input)
+    tweet_ids_lst = chunk_it(tweet_ids_all)
+    print('number of tweets to fetch', len(tweet_ids_all), tweet_ids_all[:5])
+    logger.info('number of tweets to fetch=%s'%len(tweet_ids_all))
 
-    partition_idx = 0
-    unique_users = set()
     max_retries = 3
-    retry_count = 0
-    while True:
-        try:
-            results = []
-            responses = tweepy.Paginator(api.search_all_tweets,
-                                         query=query['query'],
-                                         pagination_token=pagination_token,
-                                         tweet_fields=tweet_fields_,
-                                         user_fields=user_fields_,
-                                         expansions=expand_fields_,
-                                         place_fields=place_fields_,
-                                         media_fields=media_fields_,
-                                         start_time=query['start_time'],
-                                         end_time=query['end_time'],
-                                         max_results=query['max_results'],  # max results per page, highest allowed is 500
-                                         limit=query['max_pages']  # max number of pages to return
-                                         )
-
-            for resp in responses:  # loop through each tweepy.Response field
-                # print(resp.meta)
-                if "next_token" in resp.meta:
-                    pagination_token = resp.meta['next_token']
-                else:
-                    pagination_token = None
-
-                logger.info("pagination_token=%s"%pagination_token)
-                print("pagination_token=%s"%pagination_token)
+    results = []
+    write_part = 0
+    for idx, tweet_ids in enumerate(tweet_ids_lst):
+        retry_count = 0
+        while True:
+            try:
+                resp = api.get_tweets(
+                    ids=tweet_ids,
+                    tweet_fields=tweet_fields_,
+                    user_fields=user_fields_,
+                    expansions=expand_fields_,
+                    place_fields=place_fields_,
+                    media_fields=media_fields_,
+                )
 
                 # get all the users from includes
                 users = {}  # keyed by user id
@@ -233,7 +228,6 @@ def get_tweets(credentials, query, output, tweet_fields_, user_fields_, expand_f
                 for tweet in tweets:
                     try:
                         obj = parse_tweet(tweet, users, includes_tweets=includes_tweets, includes_media=includes_media)
-                        unique_users.add(obj['user_id'])
                         results.append(obj)
                     except Exception as e:
                         print(">>>>>Error Parsing Tweet", e, tweet.data)
@@ -242,33 +236,25 @@ def get_tweets(credentials, query, output, tweet_fields_, user_fields_, expand_f
 
                 #write to file
                 if len(results)>= lines_per_file:
-                    write_to_file(results, output, timestamp, job_name, partition_idx)
+                    write_to_file(results, output, timestamp, job_name, write_part)
                     results = []
-                    partition_idx +=1
+                    write_part+=1
+                break
+            except Exception as e:
+                print('>>>>>>>>>>>>>>>>>>>>>Error', e)
+                logger.error("error=%s"%(e))
+                if retry_count>=max_retries:
+                    return
+                retry_count+=1
+                time.sleep(60 * (retry_count+1))
+                api = get_API(credentials)
+                continue
 
-                #break if we got all the users we need
-                print('number of unique users', len(unique_users))
-                if len(unique_users)>=max_users:
-                    break
+    # write the remaining results
+    if len(results) > 0:
+        write_to_file(results, output, timestamp, job_name, write_part)
 
-                #reset retry after each successful fetch
-                retry_count = 0
-
-            #write the remaining results
-            if len(results)>0:
-                write_to_file(results, output, timestamp, job_name, partition_idx)
-            break
-        except Exception as e:
-            print('>>>>>>>>>>>>>>>>>>>>>Error', e)
-            logger.error("error=%s"%(e))
-            if retry_count>=max_retries:
-                return
-            retry_count+=1
-            time.sleep(60 * (retry_count+1))
-            api = get_API(credentials)
-            continue
-
-def batch_fetch(credentials_file, query_file, output):
+def batch_fetch(credentials_file, query_file, input, output):
     credentials = get_json(credentials_file)
     query = get_json(query_file)
     print(query)
@@ -299,7 +285,7 @@ def batch_fetch(credentials_file, query_file, output):
     print('place_fields', place_fields)
     print('media_fields', media_fields)
 
-    get_tweets(credentials, query, output, tweet_fields, user_fields, expansion_fields, place_fields, media_fields)
+    get_tweets(credentials, query, input, output, tweet_fields, user_fields, expansion_fields, place_fields, media_fields)
     return
 
 def api_test():
@@ -312,13 +298,14 @@ def api_test():
 def main():
     #This is a more flexible version of search.py; also uses tweepy here
     parser = argparse.ArgumentParser(
-        prog="search2",
+        prog="fetch_tweets_by_ids",
         formatter_class=argparse.RawTextHelpFormatter,
         description=__doc__,
     )
 
     parser.add_argument("credentials", metavar="CREDENTIALS.JSON", help="json file containing twitter credentials")
-    parser.add_argument("query", metavar="QUERY.TXT", help="file containing the search query")
+    parser.add_argument("query", metavar="QUERY.TXT", help="file containing query configurations")
+    parser.add_argument("input", help="input file containing tweet ids")
     parser.add_argument("output", help="output directory to store the output files")
 
     args = parser.parse_args()
@@ -326,15 +313,15 @@ def main():
     credentials_file = args.credentials
     query_file = args.query
     output = args.output
+    input = args.input
     if not os.path.exists(output):
         os.makedirs(output)
 
-    print('args: credentials=%s, query_file=%s, output=%s' % (credentials_file, query_file, output))
-    logger.info('args: credentials=%s, query_file=%s, output=%s' % (credentials_file, query_file, output))
+    print('args: credentials=%s, query_file=%s, input=%s, output=%s' % (credentials_file, query_file, input, output))
+    logger.info('args: credentials=%s, query_file=%s, input=%s, output=%s' % (credentials_file, query_file, input, output))
 
-    batch_fetch(credentials_file, query_file, output)
+    batch_fetch(credentials_file, query_file, input, output)
     return
-
 
 if __name__ == '__main__':
     # api_test()

@@ -2,3 +2,5 @@ tweepy
 pandas
 tenacity
 fake-useragent==0.1.14
+psycopg2-binary
+simplejson
