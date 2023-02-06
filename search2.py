@@ -253,6 +253,7 @@ def get_tweets(credentials, query, output, tweet_fields_, user_fields_, expand_f
 
                 #reset retry after each successful fetch
                 retry_count = 0
+                time.sleep(1) #rate limit
 
             #write the remaining results
             if len(results)>0:
