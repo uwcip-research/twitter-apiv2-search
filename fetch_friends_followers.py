@@ -48,6 +48,8 @@ def get_friends_followers(api, user_id, api_func):
                                      max_results=1000, #max per request is 1K
                                      limit=500)  # set max followers to 500K #TODO set to use configuration
             for resp in resps:
+                if resp is None or resp.data is None:
+                    break
                 print(resp.meta)
                 if "next_token" in resp.meta:
                     pagination_token = resp.meta['next_token']
@@ -57,6 +59,7 @@ def get_friends_followers(api, user_id, api_func):
                 networked_users = resp.data
                 for networked_user in networked_users:
                     all_user_ids.append(str(networked_user.id))
+
             return all_user_ids
         except Exception as e:
             print('>>>>>>>>>>>>>>>>>>>>>Error', e)

@@ -1,16 +1,14 @@
-import sys
+import argparse
+import gzip
+import json
+import logging
+import os
+import time
+from datetime import datetime
+
 import numpy as np
 import tweepy
-import time
-import json
-import argparse
-from datetime import datetime
-import os
-import gzip
-import tenacity
-from tweepy import Response
 
-import logging
 logging.captureWarnings(True)
 logger = logging.getLogger(__name__)
 from logging.handlers import RotatingFileHandler
@@ -197,7 +195,8 @@ def get_tweets(credentials, query, output, tweet_fields_, user_fields_, expand_f
                                          )
 
             for resp in responses:  # loop through each tweepy.Response field
-                # print(resp.meta)
+                if resp is None or resp.data is None:
+                    break
                 if "next_token" in resp.meta:
                     pagination_token = resp.meta['next_token']
                 else:
