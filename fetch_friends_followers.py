@@ -36,7 +36,7 @@ def get_user_ids(file_name):
     return user_ids
 
 def get_friends_followers(api, user_id, api_func):
-    all_friends_ids = []
+    all_user_ids = []
     max_retries = 3
     retry_count = 0
     pagination_token = None
@@ -46,7 +46,7 @@ def get_friends_followers(api, user_id, api_func):
                                      id=user_id,
                                      pagination_token=pagination_token,
                                      max_results=1000, #max per request is 1K
-                                     limit=500)  # set max followers to 500K
+                                     limit=500)  # set max followers to 500K #TODO set to use configuration
             for resp in resps:
                 print(resp.meta)
                 if "next_token" in resp.meta:
@@ -54,11 +54,10 @@ def get_friends_followers(api, user_id, api_func):
                 else:
                     pagination_token = None
 
-                friends = resp.data
-                print(friends)
-                for friend in friends:
-                    all_friends_ids.append(str(friend.id))
-            return all_friends_ids
+                networked_users = resp.data
+                for networked_user in networked_users:
+                    all_user_ids.append(str(networked_user.id))
+            return all_user_ids
         except Exception as e:
             print('>>>>>>>>>>>>>>>>>>>>>Error', e)
             traceback.print_exc()
