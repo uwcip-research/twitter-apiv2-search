@@ -1,5 +1,4 @@
 import sys
-
 import numpy as np
 import tweepy
 import time
@@ -278,7 +277,7 @@ def batch_fetch(credentials_file, query_file, output):
     user_fields = "created_at,description,entities,id,location,name,protected,public_metrics,url,username,verified,withheld"
     user_fields = query.get('user_fields', user_fields)
 
-    tweet_fields =  "attachments,author_id,conversation_id,created_at,entities,geo,id,in_reply_to_user_id,lang,public_metrics,possibly_sensitive,referenced_tweets,source,text,withheld,reply_settings,context_annotations"
+    tweet_fields =  "attachments,author_id,conversation_id,created_at,entities,geo,id,in_reply_to_user_id,lang,public_metrics,possibly_sensitive,referenced_tweets,source,text,withheld,reply_settings" #,context_annotations
     tweet_fields = query.get('tweet_fields', tweet_fields)
 
     expansion_fields = "author_id,in_reply_to_user_id,referenced_tweets.id"
