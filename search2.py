@@ -62,7 +62,7 @@ def get_media_view_count(media):
         return
     return media.get("public_metrics").get("view_count", None)
 
-def parse_ref_tweet(tweet):
+def parse_ref_tweet(tweet, users):
     # print('>>>>>>>>>>>>>>>. ref tweet', tweet.data)
     obj = {
         "id": tweet["id"],
@@ -81,6 +81,22 @@ def parse_ref_tweet(tweet):
         "possibly_sensitive": tweet["possibly_sensitive"],
         "reply_settings": tweet["reply_settings"],
     }
+
+    author = users.get(tweet["author_id"])  # get user object
+    # print('ref author is', author)
+    if author:
+        obj.update({
+            "user_id": tweet["author_id"],
+            "user_screen_name": author["username"],
+            "user_name": author["name"],
+            "user_description": author["description"],
+            "user_location": author.get("location"),
+            "user_created_at": author["created_at"],
+            "user_followers_count": author["public_metrics"]["followers_count"],
+            "user_friends_count": author["public_metrics"]["following_count"],
+            "user_statuses_count": author["public_metrics"]["tweet_count"],
+            "user_verified": author["verified"]
+        })
     return obj
 
 def parse_tweet(tweet, users, **kwargs):
@@ -126,7 +142,7 @@ def parse_tweet(tweet, users, **kwargs):
             ref_tweets = tweet.get("referenced_tweets")
             for ref_tweet_dict in ref_tweets:
                 if ref_tweet_dict['id'] in includes_tweets:
-                    ref_tweet_obj = parse_ref_tweet(includes_tweets[ref_tweet_dict['id']])
+                    ref_tweet_obj = parse_ref_tweet(includes_tweets[ref_tweet_dict['id']], users)
                     type = ref_tweet_dict['type']
                     obj['references_%s'%type] = ref_tweet_obj
 
@@ -279,7 +295,7 @@ def batch_fetch(credentials_file, query_file, output):
     tweet_fields =  "attachments,author_id,conversation_id,created_at,entities,geo,id,in_reply_to_user_id,lang,public_metrics,possibly_sensitive,referenced_tweets,source,text,withheld,reply_settings" #,context_annotations
     tweet_fields = query.get('tweet_fields', tweet_fields)
 
-    expansion_fields = "author_id,in_reply_to_user_id,referenced_tweets.id"
+    expansion_fields = "author_id,in_reply_to_user_id,referenced_tweets.id,referenced_tweets.id.author_id"
     expansion_fields = query.get("expansion_fields", expansion_fields)
 
     place_fields = ""
