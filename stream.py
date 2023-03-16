@@ -276,7 +276,7 @@ class TwitterStreamer(StreamingClient):
         except Exception as e:
             self.logger.error("an error occurred while writing a line: {}".format(e))
             self.logger.error(traceback.format_exc())
-            raise
+            # raise
 
     def on_errors(self, errors):
         for error in errors:
@@ -294,10 +294,12 @@ class TwitterStreamer(StreamingClient):
 
     def on_exit(self):
         logger.debug("existing streamer")
-        self.file_object.close()
-        os.rename("{}.tmp.gz".format(self.file_name), "{}.gz".format(self.file_name))
-        self.disconnect()
-
+        try:
+            self.disconnect()
+            self.file_object.close()
+            os.rename("{}.tmp.gz".format(self.file_name), "{}.gz".format(self.file_name))
+        except:
+            pass
 
 def get_bearer_token(file_name):
     with open(file_name, 'r') as f:
