@@ -7,6 +7,7 @@ import time
 import traceback
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
+import atexit
 
 import tenacity
 from tweepy import StreamingClient, StreamRule
@@ -208,6 +209,8 @@ class TwitterStreamer(StreamingClient):
         self.file_name = None
         self.file_object = None
 
+        atexit.register(self.on_exit) #run this when exiting
+
     def _extract_one(self, tweet, users, **kwargs):
         return parse_tweet(tweet, users, **kwargs)
 
@@ -292,6 +295,7 @@ class TwitterStreamer(StreamingClient):
     def on_exit(self):
         logger.debug("existing streamer")
         self.file_object.close()
+        os.rename("{}.tmp.gz".format(self.file_name), "{}.gz".format(self.file_name))
         self.disconnect()
 
 
