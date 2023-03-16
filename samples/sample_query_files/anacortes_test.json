@@ -1,0 +1,6 @@
+{
+  "name": "anacortes_test",
+  "query": "BNSF OR anacortes OR \"train derailment\" OR \"train derailed\" OR \"train derail\" OR diesel OR Swinomish",
+  "limit": 100,
+  "include_media": true,
+}

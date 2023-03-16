@@ -1,6 +1,9 @@
-tweepy
+tweepy>4.0.0
 pandas
 tenacity
 fake-useragent==0.1.14
 psycopg2-binary
 simplejson
+numpy
+beautifulsoup4==4.11.1
+pycurl
