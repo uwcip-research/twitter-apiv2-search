@@ -209,12 +209,15 @@ class TwitterStreamer(StreamingClient):
         self.file_name = None
         self.file_object = None
 
-        atexit.register(self.on_exit) #run this when exiting
+        atexit.register(self.on_exit)  # run this when exiting
 
     def _extract_one(self, tweet, users, **kwargs):
         return parse_tweet(tweet, users, **kwargs)
 
     def on_response(self, response):
+        if response.errors:
+            logger.info(response.errors)
+
         # step1: process includes
         includes = response.includes
 
@@ -249,10 +252,15 @@ class TwitterStreamer(StreamingClient):
 
         # step2: process actual tweets
         tweet = response.data
-        logger.debug(f'tweet is {tweet}')
-        jobj = self._extract_one(tweet, includes_users, includes_tweets=includes_tweets,
-                                 includes_media=includes_media, includes_places=includes_places)
-        self.save_data_self(jobj)
+        if tweet:
+            try:
+                logger.debug(f'tweet is {tweet}')
+                jobj = self._extract_one(tweet, includes_users, includes_tweets=includes_tweets,
+                                         includes_media=includes_media, includes_places=includes_places)
+                self.save_data_self(jobj)
+            except Exception as e:
+                logger.info(f'tweet is {tweet}')
+                raise e
 
     @tenacity.retry(wait=tenacity.wait_fixed(1), stop=tenacity.stop_after_attempt(3))
     def save_data_self(self, item):
@@ -301,6 +309,7 @@ class TwitterStreamer(StreamingClient):
         except:
             pass
 
+
 def get_bearer_token(file_name):
     with open(file_name, 'r') as f:
         credentials = json.load(f)
@@ -315,6 +324,7 @@ def get_query(file_name):
 def run(credential_file, query_file, output_dir):
     bearer_token = get_bearer_token(credential_file)
     query = get_query(query_file)
+    logger.info(f'query is {query}')
 
     streamer = TwitterStreamer(bearer_token, query['limit'], output_dir, wait_on_rate_limit=True)
 
@@ -351,6 +361,7 @@ def run(credential_file, query_file, output_dir):
     # start data stream
     streamer.filter(user_fields=user_fields, tweet_fields=tweet_fields, place_fields=place_fields,
                     media_fields=media_fields, expansions=expansion_fields)
+
 
 def main():
     # twitter v2 streamer
