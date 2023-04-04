@@ -1,14 +1,12 @@
+import argparse
+import json
+import logging
+import os
+import time
 import traceback
 
 import tweepy
-import time
-import json
-import argparse
-from datetime import datetime
-import os
-import gzip
 
-import logging
 logging.captureWarnings(True)
 logger = logging.getLogger(__name__)
 from logging.handlers import RotatingFileHandler
@@ -40,11 +38,13 @@ def get_friends_followers(api, user_id, api_func):
     max_retries = 3
     retry_count = 0
     pagination_token = None
+    user_fields = "created_at,description,entities,id,location,name,protected,public_metrics,url,username,verified,withheld"
     while True:
         try:
             resps = tweepy.Paginator(api_func,
                                      id=user_id,
                                      pagination_token=pagination_token,
+                                     user_fields=user_fields,
                                      max_results=1000, #max per request is 1K
                                      limit=500)  # set max followers to 500K #TODO set to use configuration
             for resp in resps:
@@ -58,7 +58,7 @@ def get_friends_followers(api, user_id, api_func):
 
                 networked_users = resp.data
                 for networked_user in networked_users:
-                    all_user_ids.append(str(networked_user.id))
+                    all_user_ids.append(json.dumps(networked_user.data))
 
             return all_user_ids
         except Exception as e:
